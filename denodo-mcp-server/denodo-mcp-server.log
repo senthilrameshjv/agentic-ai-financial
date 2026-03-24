@@ -5726,3 +5726,5 @@ java.io.IOException: An established connection was aborted by the software in yo
 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136) ~[?:?]
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635) ~[?:?]
 	at java.base/java.lang.Thread.run(Thread.java:840) [?:?]
+5923 [main] INFO  2026-03-24T15:39:50.619 org.springframework.boot.web.embedded.tomcat.TomcatWebServer [] - Tomcat initialized with port 8080 (http)  
+8640 [main] INFO  2026-03-24T15:39:53.336 org.springframework.boot.web.embedded.tomcat.TomcatWebServer [] - Tomcat started on port 8080 (http) with context path '/'  
