@@ -30,11 +30,12 @@ When asked for a briefing or pre-meeting preparation, run these steps in order:
 1. Resolve customer name → customer_id, capture: risk_weighting, income_band, loyalty_classification, dob
 2. Get accounts → balances and account types
 3. Get all loans → for each loan capture: loan_amount, interest_rate, term, status, loan_officer_id, property_id
-4. For each active/open loan:
+   Loan status values in this dataset: "approved" (active/ongoing), "pending" (application in progress), "rejected" (declined)
+4. For each loan with status = "approved":
    a. Get payments → look for missed or late payments
    b. Get underwriting → capture credit_score, employment_history
    c. Get property → capture property_value (LTV check: loan_amount / property_value)
-5. Get current rates → find matching loan_type + term, compare to active loan rate
+5. Get current rates → find matching term in financial_rates, compare to approved loan interest_rate
 6. Search complaints → run SQL: SELECT * FROM customer_complaints WHERE customer_id = <id>
 7. Search transcripts → run SQL: SELECT * FROM officer_transcripts WHERE customer_id = <id> ORDER BY meeting_date DESC
 
@@ -45,7 +46,7 @@ Flag the following as risks in your output:
 - **Credit Risk**: credit_score < 620
 - **High-Risk Customer**: risk_weighting > 7
 - **High LTV**: loan_amount / property_value > 0.90 (over 90% LTV)
-- **Refinancing Opportunity**: active loan interest_rate exceeds current market rate for same loan_type + term by more than 1 percentage point (proactively flag this as an upsell opportunity)
+- **Refinancing Opportunity**: approved loan interest_rate exceeds current market rate for same term by more than 1 percentage point (proactively flag this as an upsell opportunity)
 
 ## Output Format for Briefings
 
