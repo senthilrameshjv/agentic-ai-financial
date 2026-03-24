@@ -117,13 +117,13 @@ See [`demo/demo-script.md`](demo/demo-script.md) for a full walkthrough with thr
 **Quick start questions:**
 
 ```
-Find customer Sarah Johnson and show me her profile and account balances.
+Find Robert Logan and show me his profile and account balances.
 ```
 ```
-Is Sarah at risk of defaulting on any of her loans?
+Is Robert at risk of defaulting on any of his loans?
 ```
 ```
-Prepare a full pre-meeting briefing for my meeting with Sarah Johnson tomorrow.
+Prepare a full pre-meeting briefing for my meeting with Robert Logan tomorrow.
 ```
 
 ## Architecture
