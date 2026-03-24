@@ -38,6 +38,17 @@ curl -u admin:admin http://localhost:8080/verticals/mcp
 
 The server must be reachable at `http://localhost:8080/verticals/mcp` before proceeding.
 
+## Prepare data for the demo scenario
+
+The data is modified so that the 'happy path' works for one of the customers. 
+
+UPDATE financial_customers SET risk_weighting = 9 WHERE customer_id = 10117;
+UPDATE financial_loans SET interest_rate = 5.5 WHERE loan_id = 7581;
+INSERT INTO verticals.financial_underwriting
+    (underwriting_id, loan_id, credit_score, employment_history, financial_history)
+  VALUES
+    (2001, 7581, 575, 'Stable', 'Poor');
+
 ## Installation
 
 ### 1. Clone and configure environment
