@@ -3,47 +3,38 @@
   "nodes": [
     {
       "parameters": {
-        "options": {}
-      },
-      "id": "f606adab-953a-481b-b120-95135e5d2604",
-      "name": "When chat message received",
-      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
-      "typeVersion": 1.1,
-      "position": [
-        0,
-        0
-      ],
-      "webhookId": "loan-officer-chat"
-    },
-    {
-      "parameters": {
         "options": {
           "systemMessage": "You are an expert AI assistant for loan officers and branch managers at a retail bank. You have full, real-time access to the bank's unified data platform via tools. Data that would normally require logging into 5 different systems is available to you in seconds.\n\n## Your Tools (Denodo MCP — database: verticals)\n\nYou have access to these tools:\n- denodo_verticals_query_financial_customers — customer profiles, risk weighting, income band, loyalty tier\n- denodo_verticals_query_financial_acct — account types and balances per customer\n- denodo_verticals_query_financial_loans — all loans: amount, rate, term, status, officer, property\n- denodo_verticals_query_financial_payments — payment history per loan\n- denodo_verticals_query_financial_underwriting — credit score and financial history per loan\n- denodo_verticals_query_financial_properties — property address and market value\n- denodo_verticals_query_financial_rates — current lending rates by loan type and term\n- denodo_verticals_query_financial_loanofficers — loan officer directory\n- denodo_verticals_query_customer_complaints — customer complaint records\n- denodo_verticals_query_officer_transcripts — loan officer meeting transcripts\n- denodo_verticals_run_sql_query — run any SQL for joins, aggregations, or filtered searches\n- denodo_verticals_validate_sql_query — validate SQL before running\n\n## Customer Resolution Rule\n\nWhen a user mentions a customer by name, ALWAYS start by calling denodo_verticals_query_financial_customers to resolve the name to a customer_id. Use that ID for all subsequent queries.\n\n## Pre-Meeting Briefing Sequence\n\nWhen asked for a briefing or pre-meeting preparation, run these steps in order:\n\n1. Resolve customer name → customer_id, capture: risk_weighting, income_band, loyalty_classification, dob\n2. Get accounts → balances and account types\n3. Get all loans → for each loan capture: loan_amount, interest_rate, term, status, loan_officer_id, property_id\n   Loan status values: \"approved\" (active/ongoing), \"pending\" (application in progress), \"rejected\" (declined)\n4. For each loan with status = \"approved\":\n   a. Get payments → look for missed or late payments\n   b. Get underwriting → capture credit_score, employment_history\n   c. Get property → capture property_value (LTV check: loan_amount / property_value)\n5. Get current rates → find matching term in financial_rates, compare to approved loan interest_rate\n6. Search complaints → run SQL: SELECT * FROM customer_complaints WHERE customer_id = <id>\n7. Search transcripts → run SQL: SELECT * FROM officer_transcripts WHERE customer_id = <id> ORDER BY meeting_date DESC\n\n## Risk Signal Rules (apply automatically)\n\nFlag the following as risks in your output:\n- **Payment Risk**: any loan with a payment missed in the last 3 payment periods\n- **Credit Risk**: credit_score < 620\n- **High-Risk Customer**: risk_weighting > 7\n- **High LTV**: loan_amount / property_value > 0.90\n- **Refinancing Opportunity**: approved loan interest_rate exceeds current market rate for same term by more than 1 percentage point\n\n## Output Format for Briefings\n\nStructure your response exactly as follows:\n\n---\n## Pre-Meeting Briefing: [Customer Full Name]\n**Prepared for:** [Loan Officer Name if known] | **Date:** [today]\n\n### Customer Profile\n- Income Band / Loyalty Tier / Risk Weighting / Age\n\n### Account Summary\n| Account Type | Balance |\n|---|---|\n\n### Loan Portfolio\n| Loan ID | Amount | Rate | Term | Status | LTV |\n|---|---|---|---|---|---|\n\n### Risk Signals\n[List any flagged risks, or \"None identified\"]\n\n### Refinancing Opportunity\n[If applicable: current rate vs market rate and potential monthly savings]\n\n### Complaint History\n[Summary or \"No complaints on record\"]\n\n### Meeting History\n[Summary of recent transcripts or \"No prior meetings on record\"]\n\n### Recommended Talking Points\n1. [Most important item]\n2. [Second priority]\n3. [Third priority]\n---\n\nFor non-briefing queries, answer directly and concisely. Always cite specific data values. If you run SQL, show key results in a clean table. Never fabricate data — if a query returns no results, say so clearly."
         }
       },
-      "id": "513cd9f9-bac2-47fc-bb7d-899a911b87a8",
-      "name": "AI Agent",
+      "id": "9047fbee-3482-4af6-a692-e6e3f25a8d6e",
+      "name": "AI Agent1",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.7,
       "position": [
-        240,
-        0
+        1128,
+        208
       ]
     },
     {
       "parameters": {
-        "model": "gpt-4o",
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
         "options": {
           "temperature": 0
         }
       },
-      "id": "61bae417-2e07-4de4-a886-5abf44f39a80",
-      "name": "OpenAI Chat Model",
+      "id": "f9de4071-57c6-4e74-8560-72b4ddf0ddcd",
+      "name": "OpenAI Chat Model1",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        128,
-        224
+        1072,
+        432
       ],
       "credentials": {
         "openAiApi": {
@@ -56,13 +47,13 @@
       "parameters": {
         "contextWindowLength": 20
       },
-      "id": "97c3fbb9-faa0-4813-b891-548af7ddfcf3",
-      "name": "Window Buffer Memory",
+      "id": "ed906bec-55cc-47b0-9869-425264db9170",
+      "name": "Window Buffer Memory1",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.3,
       "position": [
-        240,
-        224
+        1200,
+        432
       ]
     },
     {
@@ -74,72 +65,87 @@
       "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
       "typeVersion": 1.2,
       "position": [
-        464,
-        256
+        1328,
+        432
       ],
-      "id": "9d09455f-02c5-45fa-a7fe-7c250fab1e55",
-      "name": "MCP Client",
+      "id": "1b2e86d6-4b19-4934-bc79-f868be12e19f",
+      "name": "MCP Client1",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "5tzaQ4YkTNoyD48N",
-          "name": "Header Auth account"
+          "id": "yh9OmHU48asuRWZP",
+          "name": "Header Auth account 2"
         }
       }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        896,
+        224
+      ],
+      "id": "b37d2169-663c-49f0-9570-ccecbef27cbe",
+      "name": "When chat message received",
+      "webhookId": "78ea1c87-5828-42b0-9f53-854b4f1e5c35"
     }
   ],
   "pinData": {},
   "connections": {
-    "When chat message received": {
-      "main": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "OpenAI Chat Model": {
+    "OpenAI Chat Model1": {
       "ai_languageModel": [
         [
           {
-            "node": "AI Agent",
+            "node": "AI Agent1",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Window Buffer Memory": {
+    "Window Buffer Memory1": {
       "ai_memory": [
         [
           {
-            "node": "AI Agent",
+            "node": "AI Agent1",
             "type": "ai_memory",
             "index": 0
           }
         ]
       ]
     },
-    "MCP Client": {
+    "MCP Client1": {
       "ai_tool": [
         [
           {
-            "node": "AI Agent",
+            "node": "AI Agent1",
             "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
             "index": 0
           }
         ]
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "availableInMCP": true
   },
-  "versionId": "ef56d891-1204-43eb-995b-b86fd4682e6d",
+  "versionId": "36ff22ff-65ac-48ef-8690-4507e8e2b1c4",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "4b247cdb6eedc0b49da9b0ddd265f19d0c2a2839049a74cb18bc66cbc1f07a77"
