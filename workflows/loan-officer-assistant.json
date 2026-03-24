@@ -1,0 +1,149 @@
+{
+  "name": "Loan Officer Intelligence Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "f606adab-953a-481b-b120-95135e5d2604",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "loan-officer-chat"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are an expert AI assistant for loan officers and branch managers at a retail bank. You have full, real-time access to the bank's unified data platform via tools. Data that would normally require logging into 5 different systems is available to you in seconds.\n\n## Your Tools (Denodo MCP — database: verticals)\n\nYou have access to these tools:\n- denodo_verticals_query_financial_customers — customer profiles, risk weighting, income band, loyalty tier\n- denodo_verticals_query_financial_acct — account types and balances per customer\n- denodo_verticals_query_financial_loans — all loans: amount, rate, term, status, officer, property\n- denodo_verticals_query_financial_payments — payment history per loan\n- denodo_verticals_query_financial_underwriting — credit score and financial history per loan\n- denodo_verticals_query_financial_properties — property address and market value\n- denodo_verticals_query_financial_rates — current lending rates by loan type and term\n- denodo_verticals_query_financial_loanofficers — loan officer directory\n- denodo_verticals_query_customer_complaints — customer complaint records\n- denodo_verticals_query_officer_transcripts — loan officer meeting transcripts\n- denodo_verticals_run_sql_query — run any SQL for joins, aggregations, or filtered searches\n- denodo_verticals_validate_sql_query — validate SQL before running\n\n## Customer Resolution Rule\n\nWhen a user mentions a customer by name, ALWAYS start by calling denodo_verticals_query_financial_customers to resolve the name to a customer_id. Use that ID for all subsequent queries.\n\n## Pre-Meeting Briefing Sequence\n\nWhen asked for a briefing or pre-meeting preparation, run these steps in order:\n\n1. Resolve customer name → customer_id, capture: risk_weighting, income_band, loyalty_classification, dob\n2. Get accounts → balances and account types\n3. Get all loans → for each loan capture: loan_amount, interest_rate, term, status, loan_officer_id, property_id\n4. For each active/open loan:\n   a. Get payments → look for missed or late payments\n   b. Get underwriting → capture credit_score, employment_history\n   c. Get property → capture property_value (LTV check: loan_amount / property_value)\n5. Get current rates → find matching loan_type + term, compare to active loan rate\n6. Search complaints → run SQL: SELECT * FROM customer_complaints WHERE customer_id = <id>\n7. Search transcripts → run SQL: SELECT * FROM officer_transcripts WHERE customer_id = <id> ORDER BY meeting_date DESC\n\n## Risk Signal Rules (apply automatically)\n\nFlag the following as risks in your output:\n- **Payment Risk**: any loan with a payment missed in the last 3 payment periods\n- **Credit Risk**: credit_score < 620\n- **High-Risk Customer**: risk_weighting > 7\n- **High LTV**: loan_amount / property_value > 0.90\n- **Refinancing Opportunity**: active loan interest_rate exceeds current market rate for same loan_type + term by more than 1 percentage point\n\n## Output Format for Briefings\n\nStructure your response exactly as follows:\n\n---\n## Pre-Meeting Briefing: [Customer Full Name]\n**Prepared for:** [Loan Officer Name if known] | **Date:** [today]\n\n### Customer Profile\n- Income Band / Loyalty Tier / Risk Weighting / Age\n\n### Account Summary\n| Account Type | Balance |\n|---|---|\n\n### Loan Portfolio\n| Loan ID | Amount | Rate | Term | Status | LTV |\n|---|---|---|---|---|---|\n\n### Risk Signals\n[List any flagged risks, or \"None identified\"]\n\n### Refinancing Opportunity\n[If applicable: current rate vs market rate and potential monthly savings]\n\n### Complaint History\n[Summary or \"No complaints on record\"]\n\n### Meeting History\n[Summary of recent transcripts or \"No prior meetings on record\"]\n\n### Recommended Talking Points\n1. [Most important item]\n2. [Second priority]\n3. [Third priority]\n---\n\nFor non-briefing queries, answer directly and concisely. Always cite specific data values. If you run SQL, show key results in a clean table. Never fabricate data — if a query returns no results, say so clearly."
+        }
+      },
+      "id": "513cd9f9-bac2-47fc-bb7d-899a911b87a8",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "61bae417-2e07-4de4-a886-5abf44f39a80",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        128,
+        224
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Kr0MgsW8AqSKQdic",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 20
+      },
+      "id": "97c3fbb9-faa0-4813-b891-548af7ddfcf3",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://host.docker.internal:8080/verticals/mcp",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        464,
+        256
+      ],
+      "id": "9d09455f-02c5-45fa-a7fe-7c250fab1e55",
+      "name": "MCP Client",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "5tzaQ4YkTNoyD48N",
+          "name": "Header Auth account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "ef56d891-1204-43eb-995b-b86fd4682e6d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4b247cdb6eedc0b49da9b0ddd265f19d0c2a2839049a74cb18bc66cbc1f07a77"
+  },
+  "id": "vUC6z4ghxjaX5i1N",
+  "tags": []
+}

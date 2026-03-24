@@ -1,0 +1,19 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - N8N_SECURE_COOKIE=false
+      - WEBHOOK_URL=http://localhost:5678
+      - GENERIC_TIMEZONE=America/New_York
+      # Allow n8n to reach the Denodo MCP server running on the host
+      - NODE_FUNCTION_ALLOW_EXTERNAL=*
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  n8n_data:
