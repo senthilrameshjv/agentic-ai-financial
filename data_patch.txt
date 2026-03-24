@@ -1,0 +1,30 @@
+● Here's the full picture:
+
+  ---
+  4 Data Gaps Found:
+
+  ┌───────────────────────┬──────────────────┬──────────────────────┬────────────────────────────┐
+  │          Gap          │  Current State   │        Impact        │            Fix             │
+  ├───────────────────────┼──────────────────┼──────────────────────┼────────────────────────────┤
+  │ risk_weighting max =  │ All customers    │ "High Risk" signal   │ Set Logan to 9             │
+  │ 5                     │ scored 1–5       │ (>7) never fires     │                            │
+  ├───────────────────────┼──────────────────┼──────────────────────┼────────────────────────────┤
+  │ Refinancing gap ≤     │ Best gap is      │ Refi opportunity     │ Set Logan's loan rate to   │
+  │ 1.0%                  │ exactly 1.0%     │ never triggers       │ 5.5% (1.75% gap)           │
+  ├───────────────────────┼──────────────────┼──────────────────────┼────────────────────────────┤
+  │ Underwriting = 10%    │ Logan has no     │ "Credit Risk" signal │ Insert underwriting for    │
+  │ coverage              │ credit score     │  can't fire          │ loan 7581 with score 575   │
+  ├───────────────────────┼──────────────────┼──────────────────────┼────────────────────────────┤
+  │ No loan_type in       │ Can't label      │ Minor agent clarity  │ Optional — term-based join │
+  │ financial_loans       │ loans as "Fixed" │ issue                │  already works             │
+  └───────────────────────┴──────────────────┴──────────────────────┴────────────────────────────┘
+
+  ---
+  Recommended demo customer: Robert Logan (10117) — already has 10 complaints and 4 transcripts (2
+  modification meetings, 2 phone calls), Platinum loyalty, $593K approved mortgage. After 3 targeted
+  row patches, he triggers all 5 risk signals.
+
+  Patch SQL is in scripts/data-gap-analysis.md. The three patches are:
+  1. UPDATE financial_customers SET risk_weighting = 9 WHERE customer_id = 10117
+  2. UPDATE financial_loans SET interest_rate = 5.5 WHERE loan_id = 7581
+  3. INSERT INTO financial_underwriting ... credit_score = 575 for loan 7581
