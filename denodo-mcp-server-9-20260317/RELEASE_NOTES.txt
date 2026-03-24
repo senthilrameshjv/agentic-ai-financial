@@ -1,0 +1,34 @@
+20260317
+--------
+#114887 - Update Denodo MCP Server to Support Latest Protocol Specification (2025-11-25)
+
+20260202
+--------
+#115460 - Resolve potential deadlocks in MCP Server by refactoring synchronized cache block
+
+20260114
+--------
+#114866 - mcp not able to query views that have column names including keyword alter in select statement
+
+20251120
+--------
+#113290 - Add MCP Tool to validate VQL query syntax and semantics
+#113502 - Improve error management in Denodo MCP Server tools
+#113287 - Add MCP tool for retrieving individual view metadata
+
+20251104
+--------
+#112684 - Update Denodo MCP Server to Support Latest Protocol Specification (2025-06-18)
+#112680 - Add LIMIT clause argument to view-dedicated tools
+#112606 - Improve tool descriptions in the Denodo MCP Server
+#112178 - Normalize tool names to address client length limits
+#111567 - Refresh only necessary elements when detecting changes in VDP database schema
+
+20251003
+--------
+#112146 - Add possibility to configure MCP tools prefix
+#112112 - Change denodo-mcp-server.sh boot script to LF
+
+20251001
+--------
+- First version of the Denodo MCP Server for Denodo 9.
