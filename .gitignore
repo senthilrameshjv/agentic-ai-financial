@@ -1,2 +1,9 @@
 .env
 n8n_data/
+node_modules/
+*.json.bak
+Temp*.json
+docker-compose-old.yml
+.claude/
+todo.txt
+data_patch
