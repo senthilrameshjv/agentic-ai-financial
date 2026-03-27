@@ -12,7 +12,6 @@ generate_docx.py
 *.docx
 
 # Demo and workflow variants
-demo/
 demo copy/
 docs/
 workflows/comparision/
