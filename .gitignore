@@ -10,3 +10,16 @@ data_patch
 
 generate_docx.py
 *.docx
+
+# Demo and workflow variants
+demo/
+demo copy/
+docs/
+workflows/comparision/
+workflows/archived/
+
+# Config and local changes
+denodo-mcp-server/
+CLAUDE.md
+GEMINI.md
+agents/retention-agent-system-prompt.md
