@@ -1,97 +1,200 @@
-# 🛡️ Claude Sentinel: AI Context Health Engine
+# Agentic AI Financial Workflows
 
-**Claude Sentinel** is a "Senior AI Guardian" for [Claude Code](https://claude.ai) projects. It provides a suite of custom **Slash Commands** designed to minimize "Token Tax," eliminate hallucinations, and keep your AI collaborator perfectly synced with your codebase.
+This repository contains agentic AI workflow demos for financial services, built primarily on:
 
-In the 2026 "Vibe-Coding" era, **Context is Currency.** Sentinel ensures you don't spend it on "Ghost Links" or undocumented bloat.
+- `n8n` for orchestration
+- `OpenAI` models for agent reasoning
+- `Denodo` as the virtualized data layer
+- `MCP` for tool access from workflow agents
 
----
+The project is centered around practical workflow demos such as loan analysis, servicing, and compliance review, with supporting demo data, setup guides, and workflow exports.
 
-## 🚀 One-Command Injection
+## What’s In This Repo
 
-Inject the Sentinel engine and skills into any new project root without checking out this repo. Run this in your terminal:
+The main assets in this repository are:
 
-```bash
-curl -L https://github.com/senthilrameshjv/claude-context-audit/archive/main.tar.gz | tar -xz --strip-components=1 "claude-context-audit-main/.claude" && echo "✅ Sentinel Injected. Run /reload in Claude Code."
-```
+- `workflows/`
+  - n8n workflow JSON exports
+- `demo/`
+  - demo scripts, test prompts, and SQL patches for demo data
+- `agents/`
+  - system prompts and persona definitions used by workflows
+- `docs/`
+  - workflow notes, refactor plans, and gap-analysis writeups
+- `views.md`
+  - reference for the Denodo financial views used by the workflows
 
+## Key Workflows
 
+### 1. Multi-node loan workflow
 
----
+Primary workflow file:
 
-## 🧠 Core Capabilities
+- [loan-agent-flow-v2-multi-tree.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/loan-agent-flow-v2-multi-tree.json)
 
-### 1. `/sentinel` — The Health Guardian
-Audits your project's "Context Debt" and provides a letter grade (A-F).
-* **Ghost Buster:** Flags dead links in `CLAUDE.md` to prevent hallucinations.
-* **Token Weight:** Identifies "Heavy" files (>1,000 tokens) that eat your context window.
-* **Map Validation:** Ensures your `## Context Map` is up-to-date and readable.
+This workflow routes a chat request into one of three branches:
 
-### 2. `/watch [logfile]` — The Frontline Bodyguard
-Monitors your logs (e.g., `combined.log`) in real-time.
-* **Auto-Lookup:** When an error occurs, it automatically finds the failing file.
-* **Sentinel Sync:** Cross-references errors with the Sentinel Engine to warn you if the failing code is "undocumented or stale" before suggesting a fix.
+- `new_loan`
+- `existing_loan`
+- `compliance`
 
-### 3. `/audit` — The Initial Probe
-A lightweight version of the scanner that finds the top 5 largest files and checks for their presence in your project documentation.
+It is designed to reach these terminal outcomes:
 
----
+- `Risk Synthesizer`
+- `Flag for Human Review`
+- `Loan Status OK`
+- `Escalate to Collections`
+- `Compliance Cleared`
+- `File SAR Report`
 
-## 🛠️ Required Setup: The "GPS"
+Reference export:
 
-For the Sentinel to work at 100% efficiency, your `CLAUDE.md` must contain a `## Context Map` section. This acts as the "Map of the World" for the AI.
+- [Loan Agent Flow - Multi-Tree with same MCP and openAI model.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model.json)
 
-**Example `CLAUDE.md` entry:**
-```markdown
-## Context Map
-- src/api/           # Core backend endpoints
-- workflows/         # n8n/Automation JSON logic
-- .claude/sentinel/  # Sentinel Engine (meta)
-```
+### 2. Earlier single-path loan workflow notes
 
----
+There is also a simpler loan-flow README in:
 
-## 🧹 Maintenance Commands
+- [workflows/README.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/README.md)
 
-Use these built-in Claude Code commands alongside Sentinel to stay lean:
+That file documents the earlier sequential loan-decision pattern and is useful as background, but the multi-node workflow above is the current main demo path.
 
-| Command | When to use? | Token Impact |
-| :--- | :--- | :--- |
-| **`/compact`** | When a session gets long but you're on the same task. | Moderate Savings |
-| **`/clear`** | When switching from one feature to a completely different one. | Massive Savings |
-| **`/reload`** | After injecting new Sentinel skills. | Essential |
+## Architecture
 
----
-
-## 📁 Directory Structure
+At a high level, the workflows operate like this:
 
 ```text
-.claude/
-├── skills/
-│   ├── sentinel/    # The /sentinel orchestrator (SKILL.md)
-│   ├── watch/       # The /watch log monitor (SKILL.md)
-│   └── audit/       # The /audit lightweight probe (SKILL.md)
-└── sentinel/
-    └── scanner.sh   # The core bash engine (The "Brain")
+User / Chat Input
+  -> n8n workflow router
+  -> specialist AI agent nodes
+  -> Denodo MCP tools
+  -> Denodo virtual views
+  -> underlying source systems
 ```
 
----
+For the multi-node flow, the specialist branches are:
 
-### 💡 Pro-Tip
-Add the injection command as a shell alias in your `.zshrc` or `.bashrc` for instant deployment:
-`alias sentinel-inject='curl -L https://github.com/senthilrameshjv/claude-context-audit/archive/main.tar.gz | tar -xz --strip-components=1 "claude-context-audit-main/.claude"'`
+- underwriting-style analysis:
+  - `Credit Analyst`
+  - `Payment History Analyst`
+  - `Property Analyst`
+  - `Risk Synthesizer`
+- servicing:
+  - `Loan Servicing Agent`
+- compliance:
+  - `AML/KYC Agent`
 
----
+## Data Layer
 
-## Codex Support
+The workflows query Denodo-exposed financial views through MCP.
 
-This repository also includes a Codex-native setup for ChatGPT Codex.
+Important views include:
 
-- Use `AGENTS.md` at the repository root for Codex repository instructions.
-- Use `.agents/skills/` for repo-local Codex skills.
-- Use `.agents/sentinel/scanner.sh` on macOS/Linux.
-- Use `.agents/sentinel/scanner.ps1` on Windows.
+- `financial_customers`
+- `financial_loans`
+- `financial_underwriting`
+- `financial_payments`
+- `financial_properties`
+- `financial_rates`
+- `customer_complaints`
+- `officer_transcripts`
 
-The Claude and Codex integrations are additive and coexist in the same repo:
+Schema reference:
 
-- Claude uses `CLAUDE.md` and `.claude/...`
-- Codex uses `AGENTS.md` and `.agents/...`
+- [views.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/views.md)
+
+## Setup
+
+### Quick start
+
+For the original setup path:
+
+- [SETUP.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/SETUP.md)
+
+For the current multi-node workflow:
+
+- [SETUP-MULTI-NODE.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/SETUP-MULTI-NODE.md)
+
+The multi-node guide covers:
+
+- starting `n8n`
+- configuring the Denodo MCP server
+- importing the workflow JSON
+- wiring OpenAI credentials
+- wiring MCP header auth
+- applying demo SQL data fixes
+- validating all six branch outcomes
+
+## Demo Data and Testing
+
+The repository includes demo SQL and testing artifacts so the workflow outcomes are data-driven rather than hard-coded in prompts.
+
+Important files:
+
+- setup SQL and branch patching:
+  - [multi-tree-flow-data-fixes.sql](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/multi-tree-flow-data-fixes.sql)
+- audit script:
+  - [audit-multi-tree-coverage.js](C:/Senthil/Projects/github-projects/agentic-ai-financial/scripts/audit-multi-tree-coverage.js)
+- gap analysis:
+  - [multi-tree-flow-gap-analysis.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/docs/multi-tree-flow-gap-analysis.md)
+- test/setup planning:
+  - [testing-and-gap-analysis.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/docs/testing-and-gap-analysis.md)
+
+## Demo Scripts
+
+For running the live workflow demo, use:
+
+- [demo-script-multi-node.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/demo-script-multi-node.md)
+- [demo-multi-node-flow.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/demo-multi-node-flow.md)
+
+These include:
+
+- exact prompts to type into the n8n chat UI
+- expected branch routing
+- expected terminal nodes
+- presenter talking points
+- pre-patch and post-patch flow expectations
+
+## Typical Test Prompts
+
+Examples for the multi-node flow:
+
+```text
+Analyze customer 18926 for loan eligibility
+```
+
+```text
+Analyze customer 10117 for loan eligibility
+```
+
+```text
+Check payment status for customer 20000
+```
+
+```text
+Run AML review for customer 21001
+```
+
+## Endpoints
+
+Typical local endpoints used during setup and demo:
+
+- n8n:
+  - [http://localhost:5678](http://localhost:5678)
+- Denodo MCP:
+  - [http://localhost:8080/verticals/mcp](http://localhost:8080/verticals/mcp)
+
+## Notes
+
+- The project’s workflow behavior should come from the data and the workflow structure, not from hidden prompt hacks.
+- Demo inserts for complaints and transcripts use `embed_ai(...)` so embedding columns are populated when supported by the underlying Denodo/Postgres path.
+- Some docs folders are intentionally Git-ignored by default, so selected docs may be force-added when they are meant to ship with the workflow package.
+
+## Codex and Claude Repo Instructions
+
+This repository also contains local AI-assistant guidance files:
+
+- [AGENTS.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/AGENTS.md)
+- [CLAUDE.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/CLAUDE.md)
+
+Those files are for repository-aware coding assistants and are not the primary product documentation for the workflow demos.
