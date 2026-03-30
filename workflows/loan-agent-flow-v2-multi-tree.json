@@ -1,0 +1,983 @@
+{
+  "name": "Loan Agent Flow - Multi-Tree with same MCP and openAI model",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "a1fb2020-6676-431b-a9ad-98f495eae492",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -3088,
+        2416
+      ],
+      "webhookId": "86a54f7d-ac9d-43f7-a3f6-7eeec95b28f6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5b34bf6a-ef7c-4aee-8cba-bd61f88c7c16",
+              "name": "chatInput",
+              "type": "string",
+              "value": "={{ $json.chatInput || $json.body?.chatInput || $json.text || \"\" }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cd6b0ca5-ce09-4990-8660-9f3dbe2bfbd1",
+      "name": "Extract Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2864,
+        2416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst raw = $input.first().json.chatInput || '';\nconst txt = raw.toLowerCase();\nlet flow = 'new_loan';\nif (/payment|missed|overdue|balance|loan.?status|delinquent|servicing|existing.?loan/.test(txt)) {\n  flow = 'existing_loan';\n} else if (/\\baml\\b|\\bkyc\\b|suspicious|\\bsar\\b|compliance|fraud|risk.?review|regulatory/.test(txt)) {\n  flow = 'compliance';\n}\nconst custMatch = raw.match(/\\b(\\d{4,6})\\b/);\nconst customer_id = custMatch ? custMatch[1] : null;\nreturn [{ json: { flow, customer_id, chatInput: raw } }];\n"
+      },
+      "id": "378f1378-5eb2-45ee-8721-e45172c5b628",
+      "name": "Intent Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2640,
+        2416
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.flow }}",
+                    "rightValue": "new_loan",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "New Loan"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.flow }}",
+                    "rightValue": "existing_loan",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Existing Loan"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.flow }}",
+                    "rightValue": "compliance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Compliance"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b47c06fb-6a14-4829-846e-e7523a89f216",
+      "name": "Flow Router Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -2432,
+        2416
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "You are the Credit Analyst agent in an autonomous loan decision workflow.\nAssess only creditworthiness using Denodo tools.\n\nTask:\n1. Extract customer_id from the input.\n2. Query financial customers by customer_id.\n3. Query financial loans by customer_id.\n4. Choose exactly one target loan for the analysis using this priority: approved loan first, otherwise active loan, otherwise the highest loan_amount.\n5. Query financial underwriting for only that target loan_id.\n\nRules:\n- Do not summarize multiple loans.\n- Output scalar values for one target loan only.\n- If multiple loans exist, ignore the others after choosing the target loan.\n\nOutput exactly this block:\nCREDIT_ANALYSIS:\n  customer_id:        [value]\n  full_name:          [first_name last_name]\n  loan_id:            [value]\n  credit_score:       [value] ([band])\n  employment_history: [value]\n  financial_history:  [value]\n  loyalty_tier:       [value]\n  income_band:        [value]\n  risk_weighting:     [value]\n  loan_amount:        [value]\n  interest_rate:      [value]\n  credit_verdict:     [STRONG / ACCEPTABLE / WEAK / INSUFFICIENT_DATA]\n\nNever fabricate data."
+        }
+      },
+      "id": "d2804a55-3aa9-4afc-a552-97b046936828",
+      "name": "Credit Analyst",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -2160,
+        2032
+      ]
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://host.docker.internal:8080/verticals/mcp",
+        "authentication": "headerAuth",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "bddb02ff-ff21-4ed8-85b4-e03b68b48129",
+      "name": "MCP Client - Credit",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        -976,
+        3168
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "yh9OmHU48asuRWZP",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "54d09086-d43b-47f4-b8b5-04e903513f4a",
+              "name": "chatInput",
+              "type": "string",
+              "value": "={{ $(\"Intent Router\").item.json.chatInput }}"
+            },
+            {
+              "id": "c00a73bd-d053-4a7b-a074-4fa3a2e5a9af",
+              "name": "customer_id",
+              "type": "string",
+              "value": "={{ $(\"Intent Router\").item.json.customer_id }}"
+            },
+            {
+              "id": "57b2b236-0450-467b-8ba5-5b67b3dab6c2",
+              "name": "flow",
+              "type": "string",
+              "value": "={{ $(\"Intent Router\").item.json.flow }}"
+            },
+            {
+              "id": "f08811ed-7c13-4c83-b5f8-a53e909fd4e9",
+              "name": "credit_analysis",
+              "type": "string",
+              "value": "={{ $json.output }}"
+            },
+            {
+              "id": "1db83134-1351-4621-9f7b-108fe2b426b1",
+              "name": "combined",
+              "type": "string",
+              "value": "={{ $(\"Intent Router\").item.json.chatInput + \"\\n\\n\" + $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "36449f0e-8079-4763-b167-8eeeb1a6f74a",
+      "name": "Set Credit Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1872,
+        2160
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.combined }}",
+        "options": {
+          "systemMessage": "You are the Payment History Analyst agent in an autonomous loan decision workflow.\nAssess only payment reliability and debt load using Denodo tools.\n\nThe workflow input already includes CREDIT_ANALYSIS.\n\nTask:\n1. Read customer_id and loan_id from CREDIT_ANALYSIS.\n2. Query financial loans by customer_id for portfolio context.\n3. Query financial payments for only the target loan_id from CREDIT_ANALYSIS.\n\nRules:\n- Keep the verdict focused on the target loan identified in CREDIT_ANALYSIS.\n- Use total_loans and total_debt_exposure for context, but do not average across multiple loans when assigning payment_verdict.\n- If the target loan is active or approved and there are zero payments or no last_payment_date can be determined, treat payment_reliability as High Risk and payment_verdict as WEAK.\n\nOutput exactly this block:\nPAYMENT_ANALYSIS:\n  customer_id:          [value]\n  loan_id:              [value]\n  total_loans:          [count]\n  total_debt_exposure:  [sum of loan_amount]\n  active_loans:         [count]\n  missed_payments:      [count or UNKNOWN]\n  payment_reliability:  [Reliable / Minor Concerns / High Risk / INSUFFICIENT_DATA]\n  dti_flag:             [LOW / MEDIUM / HIGH / UNKNOWN]\n  payment_verdict:      [STRONG / ACCEPTABLE / WEAK / INSUFFICIENT_DATA]\n\nNever fabricate data."
+        }
+      },
+      "id": "3c9aa6a0-8baa-488d-aeda-69a9a3793b79",
+      "name": "Payment History Analyst",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -1728,
+        2032
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8ea47d5e-3fe2-40a0-9b01-006375430315",
+              "name": "chatInput",
+              "type": "string",
+              "value": "={{ $json.chatInput }}"
+            },
+            {
+              "id": "c7f9cf73-a583-44a9-b38e-4bd64db373f1",
+              "name": "customer_id",
+              "type": "string",
+              "value": "={{ $json.customer_id }}"
+            },
+            {
+              "id": "1e4b10aa-d3f4-4190-b34c-f3b16ac9af53",
+              "name": "flow",
+              "type": "string",
+              "value": "={{ $json.flow }}"
+            },
+            {
+              "id": "e0d77029-d73b-46f6-bce1-32f2994e8352",
+              "name": "credit_analysis",
+              "type": "string",
+              "value": "={{ $json.credit_analysis }}"
+            },
+            {
+              "id": "029f89ee-931a-4914-87be-f38491862c68",
+              "name": "payment_analysis",
+              "type": "string",
+              "value": "={{ $(\"Payment History Analyst\").item.json.output }}"
+            },
+            {
+              "id": "a4bb2d90-cc9f-4d55-ae1d-9b3f7f4a1245",
+              "name": "combined",
+              "type": "string",
+              "value": "={{ $json.combined + \"\\n\\n\" + $(\"Payment History Analyst\").item.json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "38775b5e-84c4-4012-8be6-ade60bed1e8a",
+      "name": "Set Payment Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1504,
+        2032
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.combined }}",
+        "options": {
+          "systemMessage": "You are the Property Analyst agent in an autonomous loan decision workflow.\nAssess only collateral quality using Denodo tools.\n\nThe workflow input already includes CREDIT_ANALYSIS and PAYMENT_ANALYSIS.\n\nTask:\n1. Read customer_id and loan_id from CREDIT_ANALYSIS.\n2. Query financial loans to find the property_id for that target loan_id.\n3. Query financial properties by that property_id.\n4. Calculate LTV = loan_amount / property_value * 100 for that one target loan only.\n\nRules:\n- Do not summarize multiple loans.\n- Ignore other loans once the target loan_id is identified.\n- Output scalar values for the target loan only.\n\nOutput exactly this block:\nPROPERTY_ANALYSIS:\n  customer_id:       [value]\n  loan_id:           [value]\n  loan_amount:       [value]\n  property_value:    [value or UNKNOWN]\n  ltv_ratio:         [value or UNKNOWN]\n  ltv_risk:          [LOW / MEDIUM / HIGH / UNKNOWN]\n  collateral_rating: [STRONG / ACCEPTABLE / WEAK / INSUFFICIENT_DATA]\n  property_verdict:  [STRONG / ACCEPTABLE / WEAK / INSUFFICIENT_DATA]\n\nNever fabricate data."
+        }
+      },
+      "id": "e7bdeb5e-94b5-4536-b1a1-ed2251ad644f",
+      "name": "Property Analyst",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -1280,
+        2032
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "34e5ace6-07fd-4597-a66d-4774191d5ad9",
+              "name": "chatInput",
+              "type": "string",
+              "value": "={{ $json.chatInput }}"
+            },
+            {
+              "id": "4960ef84-2a4c-4237-8c5d-bdf78df41309",
+              "name": "customer_id",
+              "type": "string",
+              "value": "={{ $json.customer_id }}"
+            },
+            {
+              "id": "159b27dc-7543-48a3-8a7e-5e2265922a6d",
+              "name": "flow",
+              "type": "string",
+              "value": "={{ $json.flow }}"
+            },
+            {
+              "id": "1229b28b-923f-4302-873a-ec64940e9b0d",
+              "name": "credit_analysis",
+              "type": "string",
+              "value": "={{ $json.credit_analysis }}"
+            },
+            {
+              "id": "65fc4890-45aa-4c10-ae05-adb2fe101eb6",
+              "name": "payment_analysis",
+              "type": "string",
+              "value": "={{ $json.payment_analysis }}"
+            },
+            {
+              "id": "e6d7d0ad-3838-43d1-b1fd-901e1dacccb7",
+              "name": "property_analysis",
+              "type": "string",
+              "value": "={{ $(\"Property Analyst\").item.json.output }}"
+            },
+            {
+              "id": "d49155ae-148c-4668-bb59-a5abe762cd68",
+              "name": "combined",
+              "type": "string",
+              "value": "={{ $json.combined + \"\\n\\n\" + $(\"Property Analyst\").item.json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "95bf7739-c232-4287-b363-bdb23c36741b",
+      "name": "Set Property Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -992,
+        2176
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.combined }}",
+              "rightValue": "WEAK",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "leftValue": "={{ $json.combined }}",
+              "rightValue": "High Risk",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "leftValue": "={{ $json.combined }}",
+              "rightValue": "INSUFFICIENT_DATA",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "d87bd835-38de-4e68-8135-b5531d23c89e",
+      "name": "Risk Gate",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        2032
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst combined = $input.first().json.combined || '';\nconst pick = (regex, fallback = 'UNKNOWN') => {\n  const match = combined.match(regex);\n  return match ? match[1].trim() : fallback;\n};\nconst customerId = pick(/customer_id:\\s*([^\\n]+)/i, $json.customer_id ? String($json.customer_id) : 'UNKNOWN');\nconst fullName = pick(/full_name:\\s*([^\\n]+)/i);\nconst loanAmount = pick(/loan_amount:\\s*([^\\n]+)/i);\nconst creditVerdict = pick(/credit_verdict:\\s*([^\\n]+)/i);\nconst paymentVerdict = pick(/payment_verdict:\\s*([^\\n]+)/i);\nconst propertyVerdict = pick(/property_verdict:\\s*([^\\n]+)/i);\nconst ltvRatio = pick(/ltv_ratio:\\s*([^\\n]+)/i);\nconst signals = [];\nif (/WEAK|INSUFFICIENT_DATA/i.test(creditVerdict)) signals.push('credit_verdict: ' + creditVerdict);\nif (/WEAK|INSUFFICIENT_DATA/i.test(paymentVerdict) || /payment_reliability:\\s*High Risk/i.test(combined)) signals.push('payment_verdict: ' + paymentVerdict);\nif (/WEAK|INSUFFICIENT_DATA/i.test(propertyVerdict)) signals.push('property_verdict: ' + propertyVerdict);\nif (/^UNKNOWN$/i.test(ltvRatio) === false && Number.parseFloat(ltvRatio) >= 90) signals.push('ltv_ratio: ' + ltvRatio);\nreturn [{ json: { text: [\n  '==============================',\n  'LOAN APPLICATION - FLAGGED FOR HUMAN REVIEW',\n  '==============================',\n  'Customer:    ' + fullName + ' | ID: ' + customerId,\n  'Loan Amount: $' + loanAmount,\n  '',\n  'RISK SIGNALS DETECTED:',\n  ...(signals.length ? signals.map((s) => '  ' + s) : ['  Manual review required based on risk gate trigger']),\n  '',\n  'AGENT FINDINGS SUMMARY:',\n  '  Credit Verdict:   ' + creditVerdict,\n  '  Payment Verdict:  ' + paymentVerdict,\n  '  Property Verdict: ' + propertyVerdict,\n  '  LTV Ratio:        ' + ltvRatio,\n  '',\n  'ACTION REQUIRED:',\n  '  Manual underwriter review is required before any decision is issued.',\n  '  Do not approve or decline without senior sign-off.',\n  '',\n  'Flagged by: Autonomous Risk Gate - Denodo-powered loan assessment pipeline.',\n  '=============================='\n].join('\\n') } }];\n"
+      },
+      "id": "dc28de84-4428-4652-835c-be0d67996482",
+      "name": "Flag for Human Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        1952
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.combined }}",
+        "options": {
+          "systemMessage": "You are the Risk Synthesizer, the final decision-maker in an autonomous loan decision workflow.\nRead CREDIT_ANALYSIS, PAYMENT_ANALYSIS, and PROPERTY_ANALYSIS from the workflow input.\nDo not re-query credit, payment, or property data. You may only query mortgage rates.\n\nDecision logic:\n- APPROVE if credit_verdict, payment_verdict, and property_verdict are STRONG or ACCEPTABLE, and ltv_ratio < 90%\n- DECLINE if credit_verdict is WEAK, payment_reliability is High Risk, or ltv_ratio > 95%\n- Otherwise REFER TO UNDERWRITER\n\nProduce a LOAN DECISION BRIEF with the final outcome and suggested rate.\nNever fabricate data. If any prior analysis block is missing, issue REFER TO UNDERWRITER."
+        }
+      },
+      "id": "b7838227-b594-472e-a7df-3afe07c32870",
+      "name": "Risk Synthesizer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -624,
+        2096
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "609cc5d3-7882-4d5e-9975-b7e5e56f8fa7",
+              "name": "text",
+              "type": "string",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f81ff574-6bde-4ca4-b10a-1dd70f8e7948",
+      "name": "Return Loan Decision",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -400,
+        2096
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "You are the Loan Servicing Agent in an autonomous loan workflow.\nAssess the current status and payment standing of an existing loan using Denodo.\n\nTask:\n1. Extract customer_id from the input.\n2. Query the customer's loans.\n3. Choose exactly one servicing loan using this priority: active loan first, otherwise approved loan, otherwise defaulted loan, otherwise the most recent available loan.\n4. Query payments for that one servicing loan.\n\nRules:\n- Base the verdict on the actual loan status and payment evidence returned by Denodo.\n- Output scalar values for one servicing loan only.\n\nOutput exactly this block:\nSERVICING_ANALYSIS:\n  customer_id:         [value]\n  loan_id:             [value]\n  loan_status:         [active / completed / defaulted / approved]\n  outstanding_balance: [value]\n  missed_payments:     [count]\n  last_payment_date:   [date or UNKNOWN]\n  delinquency_flag:    [YES / NO]\n  delinquency_verdict: [CLEAR / MONITOR / ESCALATE]\n\nNever fabricate data."
+        }
+      },
+      "id": "6828c7ff-afb6-4760-a434-dcfc4541b5f2",
+      "name": "Loan Servicing Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -2160,
+        2416
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "delinquency_flag:    YES",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "ESCALATE",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "d066a176-e795-4ff4-a519-dd3a431e51ab",
+      "name": "Delinquency Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1888,
+        2480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst findings = $input.first().json.output || '';\nconst custMatch = findings.match(/customer_id:\\s*(\\d+)/);\nconst loanMatch = findings.match(/loan_id:\\s*(\\d+)/);\nreturn [{ json: { text: [\n  '==============================',\n  'LOAN SERVICING - ESCALATED TO COLLECTIONS',\n  '==============================',\n  'Customer ID: ' + (custMatch ? custMatch[1] : 'UNKNOWN'),\n  'Loan ID:     ' + (loanMatch ? loanMatch[1] : 'UNKNOWN'),\n  'Status:      COLLECTIONS ESCALATED',\n  'Reason:      2+ missed payments or loan in default status.',\n  '',\n  'Servicing Findings:',\n  findings,\n  '',\n  'Next Action: Collections team notified. Customer outreach required within 24 hours.',\n  'Timestamp:   ' + new Date().toISOString(),\n  '=============================='\n].join('\\n') } }];\n"
+      },
+      "id": "299457f7-d82d-4b0a-bca7-3a67572bb42c",
+      "name": "Escalate to Collections",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1728,
+        2336
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst findings = $input.first().json.output || '';\nconst custMatch = findings.match(/customer_id:\\s*(\\d+)/);\nreturn [{ json: { text: [\n  '==============================',\n  'LOAN SERVICING SUMMARY',\n  '==============================',\n  'Customer ID:  ' + (custMatch ? custMatch[1] : 'UNKNOWN'),\n  'Status:       LOAN IN GOOD STANDING',\n  '',\n  findings,\n  '',\n  'No delinquency detected. Loan servicing is current.',\n  'Timestamp: ' + new Date().toISOString(),\n  '=============================='\n].join('\\n') } }];\n"
+      },
+      "id": "661be14f-f1c4-4b9e-adb6-87d5ca6cefcc",
+      "name": "Loan Status OK",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1728,
+        2496
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "You are the AML/KYC Compliance Agent in an autonomous regulatory workflow.\nAssess a customer for suspicious activity, identity risk, and regulatory flags using Denodo.\n\nOutput exactly this block:\nCOMPLIANCE_ANALYSIS:\n  customer_id:          [value]\n  full_name:            [value]\n  identity_verified:    [YES / NO / PARTIAL]\n  sar_trigger:          [YES / NO]\n  sar_reasons:          [value]\n  complaint_flags:      [count or NONE]\n  financial_risk_band:  [LOW / MEDIUM / HIGH]\n  compliance_verdict:   [CLEAR / REVIEW / SAR_REQUIRED]\n\nNever fabricate data."
+        }
+      },
+      "id": "61f96fb7-1cb1-4dfd-9d95-6c1a751ffbb2",
+      "name": "AML/KYC Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -2160,
+        2784
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "sar_trigger:          YES",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "SAR_REQUIRED",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "c4d8e2c2-285e-4713-9428-eaf4118f179b",
+      "name": "SAR Trigger Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1952,
+        2784
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst findings = $input.first().json.output || '';\nconst custMatch  = findings.match(/customer_id:\\s*(\\d+)/);\nconst nameMatch  = findings.match(/full_name:\\s*([^\\n]+)/);\nconst reasonMatch = findings.match(/sar_reasons:\\s*([^\\n]+)/);\nconst reportId = 'SAR-' + Date.now();\nreturn [{ json: { text: [\n  '==============================',\n  'SUSPICIOUS ACTIVITY REPORT FILED',\n  '==============================',\n  'Report ID:     ' + reportId,\n  'Customer ID:   ' + (custMatch  ? custMatch[1]  : 'UNKNOWN'),\n  'Customer Name: ' + (nameMatch  ? nameMatch[1].trim()  : 'UNKNOWN'),\n  'SAR Reasons:   ' + (reasonMatch ? reasonMatch[1].trim() : 'See findings'),\n  '',\n  'Compliance Findings:',\n  findings,\n  '',\n  'IMPORTANT: Do not alert the customer. Escalated to compliance officer.',\n  'Timestamp: ' + new Date().toISOString(),\n  '=============================='\n].join('\\n') } }];\n"
+      },
+      "id": "32b46bea-5293-4b91-a566-e220869c1560",
+      "name": "File SAR Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1728,
+        2704
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst findings = $input.first().json.output || '';\nconst custMatch = findings.match(/customer_id:\\s*(\\d+)/);\nreturn [{ json: { text: [\n  '==============================',\n  'COMPLIANCE & AML ASSESSMENT - CLEARED',\n  '==============================',\n  'Customer ID: ' + (custMatch ? custMatch[1] : 'UNKNOWN'),\n  'Verdict:     CLEAR - No SAR triggers detected.',\n  '',\n  findings,\n  '',\n  'Customer cleared for continued engagement.',\n  'Regulatory note: Assessment generated autonomously via Denodo unified data layer.',\n  'Timestamp: ' + new Date().toISOString(),\n  '=============================='\n].join('\\n') } }];\n"
+      },
+      "id": "58da6cc9-9812-4d91-943a-ccd6b025b3bf",
+      "name": "Compliance Cleared",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1728,
+        2864
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "options": {}
+      },
+      "id": "9d9d2780-c402-4ced-b581-9d1cb79a8de1",
+      "name": "OpenAI Chat Model - Credit",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -736,
+        2832
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Kr0MgsW8AqSKQdic",
+          "name": "OpenAiKey"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Extract Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Input": {
+      "main": [
+        [
+          {
+            "node": "Intent Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intent Router": {
+      "main": [
+        [
+          {
+            "node": "Flow Router Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flow Router Switch": {
+      "main": [
+        [
+          {
+            "node": "Credit Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loan Servicing Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AML/KYC Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Credit Analyst": {
+      "main": [
+        [
+          {
+            "node": "Set Credit Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model - Credit": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Credit Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Loan Servicing Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AML/KYC Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Payment History Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Property Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Risk Synthesizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client - Credit": {
+      "ai_tool": [
+        [
+          {
+            "node": "Credit Analyst",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Loan Servicing Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "AML/KYC Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Payment History Analyst",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Property Analyst",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Risk Synthesizer",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Credit Context": {
+      "main": [
+        [
+          {
+            "node": "Payment History Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payment History Analyst": {
+      "main": [
+        [
+          {
+            "node": "Set Payment Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Payment Context": {
+      "main": [
+        [
+          {
+            "node": "Property Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Property Analyst": {
+      "main": [
+        [
+          {
+            "node": "Set Property Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Property Context": {
+      "main": [
+        [
+          {
+            "node": "Risk Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Risk Gate": {
+      "main": [
+        [
+          {
+            "node": "Flag for Human Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Risk Synthesizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Risk Synthesizer": {
+      "main": [
+        [
+          {
+            "node": "Return Loan Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loan Servicing Agent": {
+      "main": [
+        [
+          {
+            "node": "Delinquency Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delinquency Check": {
+      "main": [
+        [
+          {
+            "node": "Escalate to Collections",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loan Status OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AML/KYC Agent": {
+      "main": [
+        [
+          {
+            "node": "SAR Trigger Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SAR Trigger Check": {
+      "main": [
+        [
+          {
+            "node": "File SAR Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Compliance Cleared",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "673b8912-2f5d-4b12-b6b9-3c763a7d2a21",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4b247cdb6eedc0b49da9b0ddd265f19d0c2a2839049a74cb18bc66cbc1f07a77"
+  },
+  "id": "lM6azNe4F0EXjKHB",
+  "tags": [
+    {
+      "updatedAt": "2026-03-27T22:22:37.174Z",
+      "createdAt": "2026-03-27T22:22:37.174Z",
+      "id": "1mS4u2NbGhGJrLbW",
+      "name": "multi-flow"
+    },
+    {
+      "updatedAt": "2026-03-27T15:21:44.127Z",
+      "createdAt": "2026-03-27T15:21:44.127Z",
+      "id": "daQe4IluAqXHeT4N",
+      "name": "loan-decision"
+    },
+    {
+      "updatedAt": "2026-03-27T15:21:44.133Z",
+      "createdAt": "2026-03-27T15:21:44.133Z",
+      "id": "n9OjDJKIJJlHvv44",
+      "name": "denodo-mcp"
+    },
+    {
+      "updatedAt": "2026-03-27T15:21:44.131Z",
+      "createdAt": "2026-03-27T15:21:44.131Z",
+      "id": "sgUZta2wiMDs1fr6",
+      "name": "agentic-ai"
+    }
+  ]
+}
