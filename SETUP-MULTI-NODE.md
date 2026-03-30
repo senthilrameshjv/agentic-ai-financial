@@ -9,9 +9,7 @@
 
 ## What This Setup Enables
 
-This guide sets up the multi-node loan workflow at:
 
-- [http://localhost:5678/workflow/lM6azNe4F0EXjKHB](http://localhost:5678/workflow/lM6azNe4F0EXjKHB)
 
 It supports three routed branches:
 
@@ -76,18 +74,16 @@ Expected endpoint:
 ### 6. Initialize n8n
 
 - Open [http://localhost:5678](http://localhost:5678)
-- Create the admin user if this is a fresh install
+- Create the admin user if this is a fresh install (dont forget password, can't be recovered)
 
 ### 7. Import the multi-node workflow
 
 - Go to **Workflows**
 - Choose **Import from File**
 - Import:
-  - [loan-agent-flow-v2-multi-tree.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/loan-agent-flow-v2-multi-tree.json)
+  - [loan-agent-flow-v2-multi-tree.json](workflows/loan-agent-flow-v2-multi-tree.json)
 
-If you already have the workflow created live, you can instead open:
 
-- [http://localhost:5678/workflow/lM6azNe4F0EXjKHB](http://localhost:5678/workflow/lM6azNe4F0EXjKHB)
 
 ### 8. Configure OpenAI in n8n
 
@@ -113,7 +109,7 @@ If you already have the workflow created live, you can instead open:
 
 Run:
 
-- [multi-tree-flow-data-fixes.sql](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/multi-tree-flow-data-fixes.sql)
+- [multi-tree-flow-data-fixes.sql](demo/multi-tree-flow-data-fixes.sql)
 
 Notes:
 
@@ -232,7 +228,6 @@ Expected terminal node:
 
 - n8n:
   - [http://localhost:5678](http://localhost:5678)
-- live workflow:
-  - [http://localhost:5678/workflow/lM6azNe4F0EXjKHB](http://localhost:5678/workflow/lM6azNe4F0EXjKHB)
+
 - Denodo MCP:
   - [http://localhost:8080/verticals/mcp](http://localhost:8080/verticals/mcp)
