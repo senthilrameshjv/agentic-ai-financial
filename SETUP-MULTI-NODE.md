@@ -9,15 +9,13 @@
 
 ## What This Setup Enables
 
-
-
-It supports three routed branches:
+The base multi-node design supports three routed branches:
 
 - `new_loan`
 - `existing_loan`
 - `compliance`
 
-And these terminal outcomes:
+Across the newer workflow variants in this repo, those branches support these terminal outcomes:
 
 - `Risk Synthesizer`
 - `Flag for Human Review`
@@ -25,6 +23,28 @@ And these terminal outcomes:
 - `Escalate to Collections`
 - `Compliance Cleared`
 - `File SAR Report`
+
+The newest workflow fork also adds:
+
+- `investigation`
+
+That branch accepts topic-led prompts without a customer id and works backward from complaint/transcript evidence to related customers, loans, and officers.
+
+## Workflow Files
+
+Use the workflow that matches the scenario you want to demo:
+
+- original working multi-tree flow:
+  - [Loan Agent Flow - Multi-Tree with same MCP and openAI model.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model.json)
+- compliance-enhanced fork:
+  - [Loan Agent Flow - Multi-Tree with same MCP and openAI model - v2.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model%20-%20v2.json)
+- investigation-enhanced fork:
+  - [Loan Agent Flow - Multi-Tree with same MCP and openAI model - v3.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model%20-%20v3.json)
+
+Recommended default:
+
+- use `v2` when you want the compliance branch to explicitly use `customer_complaints` and `officer_transcripts`
+- use `v3` when you also want the new topic-led `investigation` branch
 
 ## Steps
 
@@ -76,14 +96,19 @@ Expected endpoint:
 - Open [http://localhost:5678](http://localhost:5678)
 - Create the admin user if this is a fresh install (dont forget password, can't be recovered)
 
-### 7. Import the multi-node workflow
+### 7. Import the workflow variant you want
 
 - Go to **Workflows**
 - Choose **Import from File**
-- Import:
-  - [loan-agent-flow-v2-multi-tree.json](workflows/loan-agent-flow-v2-multi-tree.json)
+- Import one of:
+  - [Loan Agent Flow - Multi-Tree with same MCP and openAI model.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model.json)
+  - [Loan Agent Flow - Multi-Tree with same MCP and openAI model - v2.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model%20-%20v2.json)
+  - [Loan Agent Flow - Multi-Tree with same MCP and openAI model - v3.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model%20-%20v3.json)
 
+Notes:
 
+- `v2` keeps the original 3-branch shape and extends the compliance branch to use complaints and transcripts explicitly.
+- `v3` keeps the `v2` compliance behavior and adds a fourth `investigation` branch for topic-led search.
 
 ### 8. Configure OpenAI in n8n
 
@@ -100,12 +125,18 @@ Expected endpoint:
 - Header value:
   - `Basic YWRtaW46YWRtaW4=`
 
+If you import `v3`, also verify:
+
+- `MCP Client - Investigation`
+
+It should point to the same endpoint and use the same Header Auth credential.
+
 ### 10. Activate the workflow
 
 - Save the workflow
 - Activate it
 
-### 11. Apply the multi-node demo data patch
+### 11. Apply the multi-node demo data patch if needed
 
 Run:
 
@@ -116,6 +147,8 @@ Notes:
 - This patch keeps each branch scenario isolated.
 - It uses `embed_ai('<text>')` for complaint and transcript inserts so the embedding columns are populated on insert.
 - If your source schema does not yet allow `status = 'defaulted'`, add that allowed value first before running the servicing-negative part of the patch.
+
+Current live data may already include these scenarios, but the patch remains the setup source of truth for restoring them deterministically.
 
 ### 12. Verify the patched data
 
@@ -213,12 +246,78 @@ Expected terminal node:
 
 - `File SAR Report`
 
+### Investigation by topic
+
+This prompt is only for the `v3` workflow:
+
+```text
+Find customers complaining about high mortgage rates
+```
+
+Expected branch:
+
+- `investigation`
+
+Expected terminal node:
+
+- `Return Investigation Results`
+
+Best expected customer:
+
+- Jane Doe (`20000`)
+
+Optional second `v3` investigation prompt:
+
+```text
+Show suspicious source of funds cases
+```
+
+Best expected customer:
+
+- Daniel Mercer (`21001`)
+
+## Branch Summary by Workflow Version
+
+### Original working flow
+
+- branches:
+  - `new_loan`
+  - `existing_loan`
+  - `compliance`
+- best for:
+  - baseline multi-branch demo
+
+### v2
+
+- branches:
+  - `new_loan`
+  - `existing_loan`
+  - `compliance`
+- adds:
+  - explicit complaint/transcript usage inside the compliance branch
+- best for:
+  - AML/KYC demos that need evidence from unstructured views
+
+### v3
+
+- branches:
+  - `new_loan`
+  - `existing_loan`
+  - `compliance`
+  - `investigation`
+- adds:
+  - topic-led entity discovery using complaint/transcript embeddings
+- best for:
+  - signal-first demos where the operator does not start with a customer id
+
 ## Recommended Demo References
 
 - setup flow:
   - [SETUP.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/SETUP.md)
 - multi-node demo script:
   - [demo-script-multi-node.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/demo-script-multi-node.md)
+- updated compliance plus investigation demo script:
+  - [demo-script-multi-node-v2.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/demo-script-multi-node-v2.md)
 - multi-node runbook:
   - [demo-multi-node-flow.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/demo-multi-node-flow.md)
 - gap analysis:
