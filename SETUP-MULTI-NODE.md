@@ -32,14 +32,14 @@ For semantic lookup in the investigation branch, the current Denodo query shape 
 Use the workflow that matches the scenario you want to demo or test:
 
 - stable structured baseline:
-  - [multi-node-structured-flow.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-structured-flow.json)
+  - [multi-node-structured-flow.json](workflows/multi-node-structured-flow.json)
 - stable unstructured compliance variant:
-  - [multi-node-unstructured-added.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-unstructured-added.json)
+  - [multi-node-unstructured-added.json](workflows/multi-node-unstructured-added.json)
 - stable investigation variant:
-  - [multi-node-unstructured-v2-(query using transcript or complaints).json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-unstructured-v2-%28query%20using%20transcript%20or%20complaints%29.json)
+  - [multi-node-unstructured-v2-(query using transcript or complaints).json](workflows/multi-node-unstructured-v2-%28query%20using%20transcript%20or%20complaints%29.json)
 - RAG work in progress:
-  - [multi-node-with-rag-added-(almost-working).json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-with-rag-added-%28almost-working%29.json)
-  - [multi-node-with-rag-session-lock-candidate.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-with-rag-session-lock-candidate.json)
+  - [multi-node-with-rag-added-(almost-working).json](workflows/multi-node-with-rag-added-%28almost-working%29.json)
+  - [multi-node-with-rag-session-lock-candidate.json](workflows/multi-node-with-rag-session-lock-candidate.json)
 
 Recommended default:
 

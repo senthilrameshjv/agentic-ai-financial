@@ -28,7 +28,7 @@ The main assets in this repository are:
 
 ### 1. Structured multi-node flow
 
-- [multi-node-structured-flow.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-structured-flow.json)
+- [multi-node-structured-flow.json](workflows/multi-node-structured-flow.json)
 
 This is the baseline working export with three routed branches:
 
@@ -38,7 +38,7 @@ This is the baseline working export with three routed branches:
 
 ### 2. Unstructured-data fork
 
-- [multi-node-unstructured-added.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-unstructured-added.json)
+- [multi-node-unstructured-added.json](workflows/multi-node-unstructured-added.json)
 
 This keeps the same 3-branch shape and extends the compliance branch to explicitly use:
 
@@ -47,7 +47,7 @@ This keeps the same 3-branch shape and extends the compliance branch to explicit
 
 ### 3. Investigation-enhanced fork
 
-- [multi-node-unstructured-v2-(query using transcript or complaints).json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-unstructured-v2-%28query%20using%20transcript%20or%20complaints%29.json)
+- [multi-node-unstructured-v2-(query using transcript or complaints).json](workflows/multi-node-unstructured-v2-%28query%20using%20transcript%20or%20complaints%29.json)
 
 This keeps the unstructured compliance behavior and adds a fourth branch:
 
@@ -60,8 +60,8 @@ For semantic lookup, Denodo handles query-text embedding internally via:
 
 ### 4. RAG work in progress
 
-- [multi-node-with-rag-added-(almost-working).json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-with-rag-added-%28almost-working%29.json)
-- [multi-node-with-rag-session-lock-candidate.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-with-rag-session-lock-candidate.json)
+- [multi-node-with-rag-added-(almost-working).json](workflows/multi-node-with-rag-added-%28almost-working%29.json)
+- [multi-node-with-rag-session-lock-candidate.json](workflows/multi-node-with-rag-session-lock-candidate.json)
 
 These are active work-in-progress variants for Denodo AI SDK RAG routing.
 Use them for iterative validation, not as the canonical demo baseline yet.
@@ -112,7 +112,7 @@ Important views include:
 
 Schema reference:
 
-- [views.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/views.md)
+- [views.md](views.md)
 
 ## Setup
 
@@ -120,11 +120,11 @@ Schema reference:
 
 For the base setup path:
 
-- [SETUP.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/SETUP.md)
+- [SETUP.md](SETUP.md)
 
 For the current multi-node workflow setup:
 
-- [SETUP-MULTI-NODE.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/SETUP-MULTI-NODE.md)
+- [SETUP-MULTI-NODE.md](SETUP-MULTI-NODE.md)
 
 The multi-node guide covers:
 
@@ -144,19 +144,19 @@ The repository includes demo SQL and testing artifacts so the workflow outcomes 
 Important files:
 
 - setup SQL and branch patching:
-  - [multi-tree-flow-data-fixes.sql](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/multi-tree-flow-data-fixes.sql)
+  - [multi-tree-flow-data-fixes.sql](demo/multi-tree-flow-data-fixes.sql)
 - audit script:
-  - [audit-multi-tree-coverage.js](C:/Senthil/Projects/github-projects/agentic-ai-financial/scripts/audit-multi-tree-coverage.js)
+  - [audit-multi-tree-coverage.js](scripts/audit-multi-tree-coverage.js)
 - gap analysis:
-  - [multi-tree-flow-gap-analysis.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/docs/multi-tree-flow-gap-analysis.md)
+  - [multi-tree-flow-gap-analysis.md](docs/multi-tree-flow-gap-analysis.md)
 - test/setup planning:
-  - [testing-and-gap-analysis.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/docs/testing-and-gap-analysis.md)
+  - [testing-and-gap-analysis.md](docs/testing-and-gap-analysis.md)
 
 ## Demo Scripts
 
 For the current live workflow demo, use:
 
-- [demo-script-multi-node-v2.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/demo-script-multi-node-v2.md)
+- [demo-script-multi-node-v2.md](demo/demo-script-multi-node-v2.md)
 
 This is the canonical demo script for the current workflow variants and includes:
 
@@ -215,7 +215,7 @@ Typical local endpoints used during setup and demo:
 
 This repository also contains local AI-assistant guidance files:
 
-- [AGENTS.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/AGENTS.md)
-- [CLAUDE.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/CLAUDE.md)
+- [AGENTS.md](AGENTS.md)
+- [CLAUDE.md](CLAUDE.md)
 
 Those files are for repository-aware coding assistants and are not the primary product documentation for the workflow demos.
