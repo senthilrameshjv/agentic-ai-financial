@@ -91,7 +91,7 @@ denodo-mcp-server/bin/denodo-mcp-server.bat
 
 Expected endpoint:
 
-- `http://localhost:8080/verticals/mcp`
+- `http://host.docker.internal:8080/verticals/mcp`
 
 ### 6. Start the Denodo AI SDK MCP endpoint if testing RAG
 
@@ -111,10 +111,10 @@ Expected endpoint in the current RAG candidates:
 - Go to **Workflows**
 - Choose **Import from File**
 - Import one of:
-  - [multi-node-structured-flow.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-structured-flow.json)
-  - [multi-node-unstructured-added.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-unstructured-added.json)
-  - [multi-node-unstructured-v2-(query using transcript or complaints).json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-unstructured-v2-%28query%20using%20transcript%20or%20complaints%29.json)
-  - [multi-node-with-rag-session-lock-candidate.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-with-rag-session-lock-candidate.json)
+  - [multi-node-structured-flow.json](workflows/multi-node-structured-flow.json)
+  - [multi-node-unstructured-added.json](workflows/multi-node-unstructured-added.json)
+  - [multi-node-unstructured-v2-(query using transcript or complaints).json](workflows/multi-node-unstructured-v2-%28query%20using%20transcript%20or%20complaints%29.json)
+  - [multi-node-with-rag-session-lock-candidate.json](workflows/multi-node-with-rag-session-lock-candidate.json)
 
 Notes:
 
@@ -150,7 +150,7 @@ If you imported the RAG candidate, also verify:
 
 Run:
 
-- [multi-tree-flow-data-fixes.sql](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/multi-tree-flow-data-fixes.sql)
+- [multi-tree-flow-data-fixes.sql](demo/multi-tree-flow-data-fixes.sql)
 
 Notes:
 
@@ -231,12 +231,11 @@ Thanks. Reset RAG
 
 ## Recommended References
 
-- setup flow:
-  - [SETUP.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/SETUP.md)
+
 - current demo script:
-  - [demo-script-multi-node-v2.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/demo-script-multi-node-v2.md)
+  - [demo-script-multi-node-v2.md](demo/demo-script-multi-node-v2.md)
 - schema reference:
-  - [views.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/views.md)
+  - [views.md](views.md)
 
 ## Key Endpoints
 
@@ -247,4 +246,4 @@ Thanks. Reset RAG
   - [http://localhost:8080/verticals/mcp](http://localhost:8080/verticals/mcp)
 
 - Denodo AI SDK MCP:
-  - `http://host.docker.internal:8008/mcp`
+  - `http://localhost:8008/mcp`
