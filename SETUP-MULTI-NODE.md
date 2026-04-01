@@ -61,7 +61,7 @@ docker compose up -d
 Edit `denodo-mcp-server/config/application.properties` and update the JDBC URL:
 
 ```properties
-vdp.datasource.jdbc-url=jdbc:vdb://YOUR_DENODO_HOST:49999/?noAuth=true
+vdp.datasource.jdbc-url=jdbc:vdb://YOUR_DENODO_HOST:DENODO_PORT/?noAuth=true  (make sure this host and port can be reached from your Denodo MCP server location)
 ```
 
 ### 3. Run Denodo VDP
@@ -91,7 +91,15 @@ denodo-mcp-server/bin/denodo-mcp-server.bat
 
 Expected endpoint:
 
-- `http://host.docker.internal:8080/verticals/mcp`
+- `http://host.docker.internal:8080/verticals/mcp` 
+
+<!-- If your Denodo is running on container and the container is running on a specific network like denodo-net (SE demo uses this network), run
+
+ `docker network connect denodo-net n8n`
+
+Now you would be able to point the mcp endpoint to 
+
+ `http://denodo-platform-demo:8080 -->
 
 ### 6. Start the Denodo AI SDK MCP endpoint if testing RAG
 
@@ -135,7 +143,9 @@ Notes:
 - Header name:
   - `Authorization`
 - Header value:
-  - `Basic YWRtaW46YWRtaW4=`
+  - `Basic YWRtaW46YWRtaW4=` 
+
+  Change the above base64 encoded value if you are going to use different user than admin:admin using https://mixedanalytics.com/tools/basic-authentication-generator/
 
 If you imported the RAG candidate, also verify:
 
@@ -144,7 +154,7 @@ If you imported the RAG candidate, also verify:
 ### 11. Activate the workflow
 
 - Save the workflow
-- Activate it
+
 
 ### 12. Apply the multi-node demo data patch if needed
 

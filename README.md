@@ -118,9 +118,6 @@ Schema reference:
 
 ### Quick start
 
-For the base setup path:
-
-- [SETUP.md](SETUP.md)
 
 For the current multi-node workflow setup:
 
