@@ -1,17 +1,17 @@
 {
-  "name": "Loan Agent Flow - Multi-Tree with same MCP and openAI model - v2",
+  "name": "My workflow",
   "nodes": [
     {
       "parameters": {
         "options": {}
       },
-      "id": "a1fb2020-6676-431b-a9ad-98f495eae492",
+      "id": "d859ad43-8074-4198-a875-66ab8d59f75d",
       "name": "When chat message received",
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "typeVersion": 1.1,
       "position": [
-        -3024,
-        2624
+        -2464,
+        464
       ],
       "webhookId": "86a54f7d-ac9d-43f7-a3f6-7eeec95b28f6"
     },
@@ -20,35 +20,41 @@
         "assignments": {
           "assignments": [
             {
-              "id": "5b34bf6a-ef7c-4aee-8cba-bd61f88c7c16",
+              "id": "72ef6dde-8205-4092-b456-218401f84230",
               "name": "chatInput",
               "type": "string",
               "value": "={{ $json.chatInput || $json.body?.chatInput || $json.text || \"\" }}"
+            },
+            {
+              "id": "17a96a25-64a3-45e6-99c8-65cb1c00938f",
+              "name": "sessionId",
+              "type": "string",
+              "value": "={{ $json.sessionId || $json.sessionID || $json.body?.sessionId || $json.body?.sessionID || $json.metadata?.sessionId || $json.metadata?.sessionID || \"\" }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "cd6b0ca5-ce09-4990-8660-9f3dbe2bfbd1",
+      "id": "7758e56f-6d46-4a58-b18f-48d8108c6b36",
       "name": "Extract Input",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -2800,
-        2624
+        -2240,
+        464
       ]
     },
     {
       "parameters": {
-        "jsCode": "\nconst raw = $input.first().json.chatInput || '';\nconst txt = raw.toLowerCase();\nlet flow = 'new_loan';\nif (/payment|missed|overdue|balance|loan.?status|delinquent|servicing|existing.?loan/.test(txt)) {\n  flow = 'existing_loan';\n} else if (/\\baml\\b|\\bkyc\\b|suspicious|\\bsar\\b|compliance|fraud|risk.?review|regulatory/.test(txt)) {\n  flow = 'compliance';\n}\nconst custMatch = raw.match(/\\b(\\d{4,6})\\b/);\nconst customer_id = custMatch ? custMatch[1] : null;\nreturn [{ json: { flow, customer_id, chatInput: raw } }];\n"
+        "jsCode": "\nconst raw = $input.first().json.chatInput || '';\nconst txt = raw.toLowerCase().trim();\nconst sessionId = String($input.first().json.sessionId || '').trim();\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.ragSessions || typeof staticData.ragSessions !== 'object') staticData.ragSessions = {};\nconst ragSessions = staticData.ragSessions;\nconst resetRag = /^(end|exit|stop)\\s+(rag|conversation|chat|session)$/.test(txt) || /^(new session|new conversation|reset chat|reset session)$/.test(txt);\nif (sessionId && resetRag) {\n  delete ragSessions[sessionId];\n  return [{ json: { flow: 'rag_end', customer_id: null, chatInput: raw, sessionId, rag_locked: false, rag_reset: true } }];\n}\nconst ragLocked = Boolean(sessionId && ragSessions[sessionId]);\nconst custMatch = raw.match(/\\b(\\d{4,6})\\b/);\nconst customer_id = custMatch ? custMatch[1] : null;\nconst hasCustomerId = Boolean(customer_id);\nconst isExistingLoan = /payment|missed|overdue|balance|loan.?status|delinquent|servicing|existing.?loan/.test(txt);\nconst isCompliance = /\\baml\\b|\\bkyc\\b|suspicious|\\bsar\\b|compliance|fraud|risk.?review|regulatory/.test(txt);\nconst isRagDiscovery = !hasCustomerId && /(what .*tables?|which .*tables?|available views?|available tables?|top\\s*\\d+|highest|largest|lowest|smallest|best rates?|loan related|approved loans?|rejected loans?|show .*loans|find .*loans|list .*loans|loan amount|interest rate|what rates?)/.test(txt);\nconst isInvestigation = !hasCustomerId && /find|search|which customers?|who mentioned|show .*cases|complaints? about|transcripts? about|similar complaints?|cases? involving|meeting notes|officer transcripts?|source.?of.?funds|competitor rate|escrow shortage|complaint patterns?|transcript patterns?/.test(txt);\nlet flow = 'new_loan';\nif (ragLocked) {\n  flow = 'rag_discovery';\n} else if (isExistingLoan) {\n  flow = 'existing_loan';\n} else if (isCompliance) {\n  flow = 'compliance';\n} else if (isRagDiscovery) {\n  flow = 'rag_discovery';\n  if (sessionId) ragSessions[sessionId] = true;\n} else if (isInvestigation) {\n  flow = 'investigation';\n}\nreturn [{ json: {\n  flow,\n  customer_id,\n  chatInput: raw,\n  sessionId,\n  rag_locked: flow === 'rag_discovery' && (ragLocked || Boolean(sessionId && ragSessions[sessionId])),\n  rag_session_warning: flow === 'rag_discovery' && !sessionId ? 'No sessionId found; RAG session pinning will not persist.' : ''\n} }];\n"
       },
-      "id": "378f1378-5eb2-45ee-8721-e45172c5b628",
+      "id": "ff6ca0ce-17d0-45f0-a272-8400edcd1048",
       "name": "Intent Router",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -2576,
-        2624
+        -2016,
+        464
       ]
     },
     {
@@ -120,18 +126,84 @@
               },
               "renameOutput": true,
               "outputKey": "Compliance"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.flow }}",
+                    "rightValue": "investigation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Investigation"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.flow }}",
+                    "rightValue": "rag_discovery",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "RAG Discovery"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.flow }}",
+                    "rightValue": "rag_end",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "RAG End"
             }
           ]
         },
         "options": {}
       },
-      "id": "b47c06fb-6a14-4829-846e-e7523a89f216",
+      "id": "2683fc2d-2a56-4a8a-afa9-451f26ee64f9",
       "name": "Flow Router Switch",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        -2368,
-        2624
+        -1808,
+        464
       ]
     },
     {
@@ -142,13 +214,13 @@
           "systemMessage": "You are the Credit Analyst agent in an autonomous loan decision workflow.\nAssess only creditworthiness using Denodo tools.\n\nTask:\n1. Extract customer_id from the input.\n2. Query financial customers by customer_id.\n3. Query financial loans by customer_id.\n4. Query financial underwriting by loan_id from the loan result.\n\nOutput exactly this block:\nCREDIT_ANALYSIS:\n  customer_id:        [value]\n  full_name:          [first_name last_name]\n  credit_score:       [value] ([band])\n  employment_history: [value]\n  financial_history:  [value]\n  loyalty_tier:       [value]\n  income_band:        [value]\n  risk_weighting:     [value]\n  loan_amount:        [value]\n  interest_rate:      [value]\n  credit_verdict:     [STRONG / ACCEPTABLE / WEAK / INSUFFICIENT_DATA]\n\nNever fabricate data."
         }
       },
-      "id": "d2804a55-3aa9-4afc-a552-97b046936828",
+      "id": "da888414-76dd-4b9c-89e4-80f31b2b43b8",
       "name": "Credit Analyst",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        -2096,
-        2240
+        -1536,
+        80
       ]
     },
     {
@@ -159,14 +231,20 @@
           "timeout": 60000
         }
       },
-      "id": "bddb02ff-ff21-4ed8-85b4-e03b68b48129",
+      "id": "376284c5-6516-4368-9c93-0553faa71410",
       "name": "MCP Client - Credit",
       "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
       "typeVersion": 1.2,
       "position": [
-        -912,
-        3376
-      ]
+        -352,
+        1216
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "yh9OmHU48asuRWZP",
+          "name": "Header Auth account 2"
+        }
+      }
     },
     {
       "parameters": {
@@ -206,13 +284,13 @@
         },
         "options": {}
       },
-      "id": "36449f0e-8079-4763-b167-8eeeb1a6f74a",
+      "id": "be649945-ffaf-47b4-900f-0169364bcf48",
       "name": "Set Credit Context",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -1888,
-        2240
+        -1328,
+        80
       ]
     },
     {
@@ -223,13 +301,13 @@
           "systemMessage": "You are the Payment History Analyst agent in an autonomous loan decision workflow.\nAssess only payment reliability and debt load using Denodo tools.\n\nThe workflow input already includes CREDIT_ANALYSIS.\n\nTask:\n1. Query financial loans by customer_id.\n2. Query financial payments by loan_id.\n\nOutput exactly this block:\nPAYMENT_ANALYSIS:\n  customer_id:          [value]\n  total_loans:          [count]\n  total_debt_exposure:  [sum of loan_amount]\n  active_loans:         [count]\n  missed_payments:      [count or UNKNOWN]\n  payment_reliability:  [Reliable / Minor Concerns / High Risk / INSUFFICIENT_DATA]\n  dti_flag:             [LOW / MEDIUM / HIGH / UNKNOWN]\n  payment_verdict:      [STRONG / ACCEPTABLE / WEAK / INSUFFICIENT_DATA]\n\nNever fabricate data."
         }
       },
-      "id": "3c9aa6a0-8baa-488d-aeda-69a9a3793b79",
+      "id": "9f5ca58d-de44-4c32-a175-73c94397cfbd",
       "name": "Payment History Analyst",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        -1664,
-        2240
+        -1104,
+        80
       ]
     },
     {
@@ -276,13 +354,13 @@
         },
         "options": {}
       },
-      "id": "38775b5e-84c4-4012-8be6-ade60bed1e8a",
+      "id": "b7eafa72-3089-4bed-b8d0-37add310783b",
       "name": "Set Payment Context",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -1440,
-        2240
+        -880,
+        80
       ]
     },
     {
@@ -293,13 +371,13 @@
           "systemMessage": "You are the Property Analyst agent in an autonomous loan decision workflow.\nAssess only collateral quality using Denodo tools.\n\nThe workflow input already includes CREDIT_ANALYSIS and PAYMENT_ANALYSIS.\n\nTask:\n1. Query financial loans by customer_id.\n2. Query financial properties by property_id.\n3. Calculate LTV = loan_amount / property_value * 100.\n\nOutput exactly this block:\nPROPERTY_ANALYSIS:\n  customer_id:       [value]\n  loan_amount:       [value]\n  property_value:    [value or UNKNOWN]\n  ltv_ratio:         [value or UNKNOWN]\n  ltv_risk:          [LOW / MEDIUM / HIGH / UNKNOWN]\n  collateral_rating: [STRONG / ACCEPTABLE / WEAK / INSUFFICIENT_DATA]\n  property_verdict:  [STRONG / ACCEPTABLE / WEAK / INSUFFICIENT_DATA]\n\nNever fabricate data."
         }
       },
-      "id": "e7bdeb5e-94b5-4536-b1a1-ed2251ad644f",
+      "id": "1b841d8a-9a61-40a8-8e07-dea40ef96df9",
       "name": "Property Analyst",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        -1216,
-        2240
+        -656,
+        80
       ]
     },
     {
@@ -352,13 +430,13 @@
         },
         "options": {}
       },
-      "id": "95bf7739-c232-4287-b363-bdb23c36741b",
+      "id": "98fb0df4-e840-43c9-982b-6d448636968f",
       "name": "Set Property Context",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -1008,
-        2240
+        -448,
+        80
       ]
     },
     {
@@ -399,26 +477,26 @@
         },
         "options": {}
       },
-      "id": "d87bd835-38de-4e68-8135-b5531d23c89e",
+      "id": "accf2211-afe1-4786-a799-2cd481dce40c",
       "name": "Risk Gate",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -784,
-        2240
+        -224,
+        80
       ]
     },
     {
       "parameters": {
         "jsCode": "\nconst combined = $input.first().json.combined || '';\nconst pick = (regex, fallback = 'UNKNOWN') => {\n  const match = combined.match(regex);\n  return match ? match[1].trim() : fallback;\n};\nconst customerId = pick(/customer_id:\\s*([^\\n]+)/i, $json.customer_id ? String($json.customer_id) : 'UNKNOWN');\nconst fullName = pick(/full_name:\\s*([^\\n]+)/i);\nconst loanAmount = pick(/loan_amount:\\s*([^\\n]+)/i);\nconst creditVerdict = pick(/credit_verdict:\\s*([^\\n]+)/i);\nconst paymentVerdict = pick(/payment_verdict:\\s*([^\\n]+)/i);\nconst propertyVerdict = pick(/property_verdict:\\s*([^\\n]+)/i);\nconst ltvRatio = pick(/ltv_ratio:\\s*([^\\n]+)/i);\nconst signals = [];\nif (/WEAK|INSUFFICIENT_DATA/i.test(creditVerdict)) signals.push('credit_verdict: ' + creditVerdict);\nif (/WEAK|INSUFFICIENT_DATA/i.test(paymentVerdict) || /payment_reliability:\\s*High Risk/i.test(combined)) signals.push('payment_verdict: ' + paymentVerdict);\nif (/WEAK|INSUFFICIENT_DATA/i.test(propertyVerdict)) signals.push('property_verdict: ' + propertyVerdict);\nif (/^UNKNOWN$/i.test(ltvRatio) === false && Number.parseFloat(ltvRatio) >= 90) signals.push('ltv_ratio: ' + ltvRatio);\nreturn [{ json: { text: [\n  '==============================',\n  'LOAN APPLICATION - FLAGGED FOR HUMAN REVIEW',\n  '==============================',\n  'Customer:    ' + fullName + ' | ID: ' + customerId,\n  'Loan Amount: $' + loanAmount,\n  '',\n  'RISK SIGNALS DETECTED:',\n  ...(signals.length ? signals.map((s) => '  ' + s) : ['  Manual review required based on risk gate trigger']),\n  '',\n  'AGENT FINDINGS SUMMARY:',\n  '  Credit Verdict:   ' + creditVerdict,\n  '  Payment Verdict:  ' + paymentVerdict,\n  '  Property Verdict: ' + propertyVerdict,\n  '  LTV Ratio:        ' + ltvRatio,\n  '',\n  'ACTION REQUIRED:',\n  '  Manual underwriter review is required before any decision is issued.',\n  '  Do not approve or decline without senior sign-off.',\n  '',\n  'Flagged by: Autonomous Risk Gate - Denodo-powered loan assessment pipeline.',\n  '=============================='\n].join('\\n') } }];\n"
       },
-      "id": "dc28de84-4428-4652-835c-be0d67996482",
+      "id": "d4bcddf6-5965-4f91-a980-570da4672001",
       "name": "Flag for Human Review",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -560,
-        2160
+        0,
+        0
       ]
     },
     {
@@ -429,13 +507,13 @@
           "systemMessage": "You are the Risk Synthesizer, the final decision-maker in an autonomous loan decision workflow.\nRead CREDIT_ANALYSIS, PAYMENT_ANALYSIS, and PROPERTY_ANALYSIS from the workflow input.\nDo not re-query credit, payment, or property data. You may only query mortgage rates.\n\nDecision logic:\n- APPROVE if credit_verdict, payment_verdict, and property_verdict are STRONG or ACCEPTABLE, and ltv_ratio < 90%\n- DECLINE if credit_verdict is WEAK, payment_reliability is High Risk, or ltv_ratio > 95%\n- Otherwise REFER TO UNDERWRITER\n\nProduce a LOAN DECISION BRIEF with the final outcome and suggested rate.\nNever fabricate data. If any prior analysis block is missing, issue REFER TO UNDERWRITER."
         }
       },
-      "id": "b7838227-b594-472e-a7df-3afe07c32870",
+      "id": "a8097868-7e1a-4e04-8e00-d5bd45475620",
       "name": "Risk Synthesizer",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        -560,
-        2304
+        0,
+        144
       ]
     },
     {
@@ -452,13 +530,13 @@
         },
         "options": {}
       },
-      "id": "f81ff574-6bde-4ca4-b10a-1dd70f8e7948",
+      "id": "4a6af7a0-3a68-427d-a650-fada08456472",
       "name": "Return Loan Decision",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -336,
-        2304
+        224,
+        144
       ]
     },
     {
@@ -469,13 +547,13 @@
           "systemMessage": "You are the Loan Servicing Agent in an autonomous loan workflow.\nAssess the current status and payment standing of an existing loan using Denodo.\n\nOutput exactly this block:\nSERVICING_ANALYSIS:\n  customer_id:         [value]\n  loan_id:             [value]\n  loan_status:         [active / completed / defaulted / approved]\n  outstanding_balance: [value]\n  missed_payments:     [count]\n  last_payment_date:   [date or UNKNOWN]\n  delinquency_flag:    [YES / NO]\n  delinquency_verdict: [CLEAR / MONITOR / ESCALATE]\n\nNever fabricate data."
         }
       },
-      "id": "6828c7ff-afb6-4760-a434-dcfc4541b5f2",
+      "id": "c08d05b0-d66b-40a7-bf6c-5601a2e41268",
       "name": "Loan Servicing Agent",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        -2096,
-        2624
+        -1536,
+        464
       ]
     },
     {
@@ -508,39 +586,39 @@
         },
         "options": {}
       },
-      "id": "d066a176-e795-4ff4-a519-dd3a431e51ab",
+      "id": "69bb512f-713b-4c19-a490-2a1ff1065b4b",
       "name": "Delinquency Check",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -1888,
-        2624
+        -1328,
+        464
       ]
     },
     {
       "parameters": {
         "jsCode": "\nconst findings = $input.first().json.output || '';\nconst custMatch = findings.match(/customer_id:\\s*(\\d+)/);\nconst loanMatch = findings.match(/loan_id:\\s*(\\d+)/);\nreturn [{ json: { text: [\n  '==============================',\n  'LOAN SERVICING - ESCALATED TO COLLECTIONS',\n  '==============================',\n  'Customer ID: ' + (custMatch ? custMatch[1] : 'UNKNOWN'),\n  'Loan ID:     ' + (loanMatch ? loanMatch[1] : 'UNKNOWN'),\n  'Status:      COLLECTIONS ESCALATED',\n  'Reason:      2+ missed payments or loan in default status.',\n  '',\n  'Servicing Findings:',\n  findings,\n  '',\n  'Next Action: Collections team notified. Customer outreach required within 24 hours.',\n  'Timestamp:   ' + new Date().toISOString(),\n  '=============================='\n].join('\\n') } }];\n"
       },
-      "id": "299457f7-d82d-4b0a-bca7-3a67572bb42c",
+      "id": "a1849e6d-8985-4691-bfa3-84bd8655f8d6",
       "name": "Escalate to Collections",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1664,
-        2544
+        -1104,
+        384
       ]
     },
     {
       "parameters": {
         "jsCode": "\nconst findings = $input.first().json.output || '';\nconst custMatch = findings.match(/customer_id:\\s*(\\d+)/);\nreturn [{ json: { text: [\n  '==============================',\n  'LOAN SERVICING SUMMARY',\n  '==============================',\n  'Customer ID:  ' + (custMatch ? custMatch[1] : 'UNKNOWN'),\n  'Status:       LOAN IN GOOD STANDING',\n  '',\n  findings,\n  '',\n  'No delinquency detected. Loan servicing is current.',\n  'Timestamp: ' + new Date().toISOString(),\n  '=============================='\n].join('\\n') } }];\n"
       },
-      "id": "661be14f-f1c4-4b9e-adb6-87d5ca6cefcc",
+      "id": "4f7a46fa-5e07-4f01-b3cd-141b36c66a05",
       "name": "Loan Status OK",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1664,
-        2704
+        -1104,
+        544
       ]
     },
     {
@@ -551,13 +629,13 @@
           "systemMessage": "You are the AML/KYC Compliance Agent in an autonomous regulatory workflow.\nAssess a customer for suspicious activity, identity risk, and regulatory flags using Denodo.\n\nTask:\n1. Extract customer_id from the input.\n2. Query financial customers by customer_id to confirm the customer profile and risk context.\n3. Query customer_complaints for that customer_id.\n4. Query officer_transcripts for that customer_id.\n5. Use the complaint and transcript evidence when deciding sar_trigger, sar_reasons, and compliance_verdict.\n\nRules:\n- Preserve the existing output field labels exactly.\n- complaint_flags must be the complaint count or NONE.\n- transcript_flags must be the transcript count or NONE.\n- If complaints or transcripts return no rows, set the corresponding summary to NONE.\n- Do not let the new fields replace sar_trigger or compliance_verdict; use them as supporting evidence.\n\nOutput exactly this block:\nCOMPLIANCE_ANALYSIS:\n  customer_id:          [value]\n  full_name:            [value]\n  identity_verified:    [YES / NO / PARTIAL]\n  sar_trigger:          [YES / NO]\n  sar_reasons:          [value]\n  complaint_flags:      [count or NONE]\n  financial_risk_band:  [LOW / MEDIUM / HIGH]\n  compliance_verdict:   [CLEAR / REVIEW / SAR_REQUIRED]\n  complaint_summary:    [short summary or NONE]\n  transcript_flags:     [count or NONE]\n  transcript_summary:   [short summary or NONE]\n\nNever fabricate data."
         }
       },
-      "id": "61f96fb7-1cb1-4dfd-9d95-6c1a751ffbb2",
+      "id": "512fa6cb-9d2c-4964-8d54-c78ada52bd50",
       "name": "AML/KYC Agent",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        -2096,
-        2992
+        -1536,
+        832
       ]
     },
     {
@@ -590,40 +668,133 @@
         },
         "options": {}
       },
-      "id": "c4d8e2c2-285e-4713-9428-eaf4118f179b",
+      "id": "bc00db08-c180-42a7-a1ef-65078df3a7f0",
       "name": "SAR Trigger Check",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -1888,
-        2992
+        -1328,
+        832
       ]
     },
     {
       "parameters": {
         "jsCode": "\nconst findings = $input.first().json.output || '';\nconst custMatch  = findings.match(/customer_id:\\s*(\\d+)/);\nconst nameMatch  = findings.match(/full_name:\\s*([^\\n]+)/);\nconst reasonMatch = findings.match(/sar_reasons:\\s*([^\\n]+)/);\nconst reportId = 'SAR-' + Date.now();\nreturn [{ json: { text: [\n  '==============================',\n  'SUSPICIOUS ACTIVITY REPORT FILED',\n  '==============================',\n  'Report ID:     ' + reportId,\n  'Customer ID:   ' + (custMatch  ? custMatch[1]  : 'UNKNOWN'),\n  'Customer Name: ' + (nameMatch  ? nameMatch[1].trim()  : 'UNKNOWN'),\n  'SAR Reasons:   ' + (reasonMatch ? reasonMatch[1].trim() : 'See findings'),\n  '',\n  'Compliance Findings:',\n  findings,\n  '',\n  'IMPORTANT: Do not alert the customer. Escalated to compliance officer.',\n  'Timestamp: ' + new Date().toISOString(),\n  '=============================='\n].join('\\n') } }];\n"
       },
-      "id": "32b46bea-5293-4b91-a566-e220869c1560",
+      "id": "efd02653-cd6b-49d4-966e-f57f10aa3df0",
       "name": "File SAR Report",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1664,
-        2912
+        -1104,
+        752
       ]
     },
     {
       "parameters": {
         "jsCode": "\nconst findings = $input.first().json.output || '';\nconst custMatch = findings.match(/customer_id:\\s*(\\d+)/);\nreturn [{ json: { text: [\n  '==============================',\n  'COMPLIANCE & AML ASSESSMENT - CLEARED',\n  '==============================',\n  'Customer ID: ' + (custMatch ? custMatch[1] : 'UNKNOWN'),\n  'Verdict:     CLEAR - No SAR triggers detected.',\n  '',\n  findings,\n  '',\n  'Customer cleared for continued engagement.',\n  'Regulatory note: Assessment generated autonomously via Denodo unified data layer.',\n  'Timestamp: ' + new Date().toISOString(),\n  '=============================='\n].join('\\n') } }];\n"
       },
-      "id": "58da6cc9-9812-4d91-943a-ccd6b025b3bf",
+      "id": "a33df421-410e-49e5-8cd0-0a3fbb5eab61",
       "name": "Compliance Cleared",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1664,
-        3072
+        -1104,
+        912
       ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "You are the Investigation Search Agent in a signal-led financial discovery workflow.\nYour job is to find customers related to a topic described in complaints or officer transcripts, even when the user did not provide a customer_id.\n\nTask:\n1. Normalize the user's request into a concise semantic search phrase called query_topic.\n2. Detect any narrowing hints from the request:\n   - complaint channel: call, chat, ticket\n   - transcript meeting type: branch_visit, phone, modification\n   - officer name hints\n   - timeframe hints like recent, this year, last month\n3. If an officer name hint exists, query financial_loanofficers first to resolve matching loan_officer_id values.\n4. Run a vector search over customer_complaints using denodo_verticals_run_sql_query with vector_distance(embedding, query_topic).\n5. Run a vector search over officer_transcripts using denodo_verticals_run_sql_query with vector_distance(embedding, query_topic).\n6. Apply structured narrowing in the SQL WHERE clause whenever the prompt gives channel, meeting-type, officer, or timeframe hints.\n\nRules:\n- Do not use LIMIT, TOP, or FETCH in SQL.\n- Keep selected columns narrow.\n- Sort each query by ascending distance.\n- If a vector query times out or errors, retry once with stronger narrowing if hints are available; otherwise return an empty array for that source.\n- Return only the strongest matches you actually considered, sorted by ascending distance.\n- Return plain JSON only, no markdown or commentary.\n\nReturn exactly this JSON object shape:\n{\n  \"query_topic\": \"string\",\n  \"complaint_matches\": [\n    {\n      \"customer_id\": 0,\n      \"complaint_id\": 0,\n      \"complaint_date\": \"date-or-epoch\",\n      \"resolved\": false,\n      \"distance\": 0,\n      \"complaint_text\": \"string\"\n    }\n  ],\n  \"transcript_matches\": [\n    {\n      \"customer_id\": 0,\n      \"transcript_id\": 0,\n      \"loan_officer_id\": 0,\n      \"meeting_date\": \"date-or-epoch\",\n      \"meeting_type\": \"string\",\n      \"distance\": 0,\n      \"transcript_text\": \"string\"\n    }\n  ]\n}"
+        }
+      },
+      "id": "c2b4da6b-7440-4d12-a131-897d42afbfae",
+      "name": "Investigation Search Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -1536,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst raw = $input.first().json.output || '';\nconst extractJson = (text) => {\n  const start = text.indexOf('{');\n  const end = text.lastIndexOf('}');\n  if (start === -1 || end === -1 || end <= start) return null;\n  try {\n    return JSON.parse(text.slice(start, end + 1));\n  } catch {\n    return null;\n  }\n};\nconst parsed = extractJson(raw) || {};\nconst complaintMatches = Array.isArray(parsed.complaint_matches) ? parsed.complaint_matches : [];\nconst transcriptMatches = Array.isArray(parsed.transcript_matches) ? parsed.transcript_matches : [];\nconst toNumber = (value) => {\n  const num = Number.parseFloat(value);\n  return Number.isFinite(num) ? num : null;\n};\nconst toTs = (value) => {\n  if (value === null || value === undefined || value === '') return 0;\n  if (typeof value === 'number' && Number.isFinite(value)) return value;\n  const numeric = Number(value);\n  if (Number.isFinite(numeric)) return numeric;\n  const parsedDate = Date.parse(value);\n  return Number.isFinite(parsedDate) ? parsedDate : 0;\n};\nconst customers = new Map();\nconst ensureCustomer = (customerId) => {\n  const key = String(customerId ?? 'UNKNOWN');\n  if (!customers.has(key)) {\n    customers.set(key, {\n      customer_id: key,\n      complaintCount: 0,\n      transcriptCount: 0,\n      unresolvedComplaintCount: 0,\n      bestComplaintDistance: null,\n      bestTranscriptDistance: null,\n      recentComplaintTs: 0,\n      recentTranscriptTs: 0,\n      complaintEvidence: 'NONE',\n      transcriptEvidence: 'NONE',\n      relatedOfficerIds: []\n    });\n  }\n  return customers.get(key);\n};\nfor (const match of complaintMatches) {\n  const customer = ensureCustomer(match.customer_id);\n  customer.complaintCount += 1;\n  const distance = toNumber(match.distance);\n  if (distance !== null && (customer.bestComplaintDistance === null || distance < customer.bestComplaintDistance)) {\n    customer.bestComplaintDistance = distance;\n    customer.complaintEvidence = match.complaint_text || 'NONE';\n  }\n  const ts = toTs(match.complaint_date);\n  customer.recentComplaintTs = Math.max(customer.recentComplaintTs, ts);\n  if (match.resolved === false || String(match.resolved).toLowerCase() === 'false') {\n    customer.unresolvedComplaintCount += 1;\n  }\n}\nfor (const match of transcriptMatches) {\n  const customer = ensureCustomer(match.customer_id);\n  customer.transcriptCount += 1;\n  const distance = toNumber(match.distance);\n  if (distance !== null && (customer.bestTranscriptDistance === null || distance < customer.bestTranscriptDistance)) {\n    customer.bestTranscriptDistance = distance;\n    customer.transcriptEvidence = match.transcript_text || 'NONE';\n  }\n  const ts = toTs(match.meeting_date);\n  customer.recentTranscriptTs = Math.max(customer.recentTranscriptTs, ts);\n  if (match.loan_officer_id !== undefined && match.loan_officer_id !== null && !customer.relatedOfficerIds.includes(String(match.loan_officer_id))) {\n    customer.relatedOfficerIds.push(String(match.loan_officer_id));\n  }\n}\nconst now = Date.now();\nconst rankedCustomers = [...customers.values()].map((customer) => {\n  let score = 0;\n  if (customer.bestComplaintDistance !== null) score += Math.max(0, 35 - customer.bestComplaintDistance * 20);\n  if (customer.bestTranscriptDistance !== null) score += Math.max(0, 35 - customer.bestTranscriptDistance * 20);\n  if (customer.complaintCount > 0 && customer.transcriptCount > 0) score += 20;\n  score += Math.min(customer.unresolvedComplaintCount, 3) * 4;\n  const mostRecentTs = Math.max(customer.recentComplaintTs, customer.recentTranscriptTs);\n  if (mostRecentTs > 0) {\n    const ageDays = Math.max(0, (now - mostRecentTs) / 86400000);\n    score += Math.max(0, 10 - ageDays / 30);\n  }\n  return {\n    customer_id: customer.customer_id,\n    score: Number(score.toFixed(2)),\n    complaint_count: customer.complaintCount,\n    transcript_count: customer.transcriptCount,\n    unresolved_complaint_count: customer.unresolvedComplaintCount,\n    best_complaint_distance: customer.bestComplaintDistance,\n    best_transcript_distance: customer.bestTranscriptDistance,\n    complaint_evidence: customer.complaintEvidence,\n    transcript_evidence: customer.transcriptEvidence,\n    related_officer_ids: customer.relatedOfficerIds.slice(0, 5)\n  };\n}).sort((a, b) => b.score - a.score || (a.best_complaint_distance ?? 999) - (b.best_complaint_distance ?? 999) || (a.best_transcript_distance ?? 999) - (b.best_transcript_distance ?? 999));\nconst complaintTrimmed = complaintMatches.slice().sort((a, b) => (toNumber(a.distance) ?? 999) - (toNumber(b.distance) ?? 999)).slice(0, 8);\nconst transcriptTrimmed = transcriptMatches.slice().sort((a, b) => (toNumber(a.distance) ?? 999) - (toNumber(b.distance) ?? 999)).slice(0, 8);\nconst shortlist = rankedCustomers.slice(0, 5);\nreturn [{ json: {\n  query_topic: parsed.query_topic || $json.chatInput || 'UNKNOWN',\n  complaint_matches: complaintTrimmed,\n  transcript_matches: transcriptTrimmed,\n  candidate_customer_ids: shortlist.map((item) => item.customer_id),\n  customer_rankings: shortlist,\n  matched_complaints: complaintMatches.length,\n  matched_transcripts: transcriptMatches.length\n} }];\n"
+      },
+      "id": "fcf9fa7d-1ed6-4456-af64-fd94be6b795e",
+      "name": "Rank Investigation Matches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1264,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "options": {
+          "systemMessage": "You are the Investigation Enrichment Agent in a signal-led financial discovery workflow.\nYou receive a JSON payload from the workflow containing query_topic, complaint_matches, transcript_matches, candidate_customer_ids, and customer_rankings.\n\nTask:\n1. Read candidate_customer_ids from the input JSON.\n2. If there are no candidate_customer_ids, return a low-confidence no-match result.\n3. Query financial_customers for only those customer IDs.\n4. Query financial_loans for only those customer IDs.\n5. If customer_rankings includes related_officer_ids, query financial_loanofficers for those officer IDs.\n6. Preserve the ranked order from customer_rankings.\n\nOutput exactly this block:\nINVESTIGATION_RESULTS:\n  query_topic:            [value]\n  match_confidence:       [HIGH / MEDIUM / LOW]\n  matched_customers:      [count]\n  matched_complaints:     [count]\n  matched_transcripts:    [count]\n\nCUSTOMER_MATCH:\n  customer_id:            [value]\n  full_name:              [value]\n  risk_weighting:         [value]\n  loyalty_tier:           [value]\n  related_loans:          [loan ids or NONE]\n  related_officers:       [officer names or NONE]\n  complaint_evidence:     [short summary or NONE]\n  transcript_evidence:    [short summary or NONE]\n  why_matched:            [1-line reason]\n\nRepeat CUSTOMER_MATCH for up to 5 ranked customers.\n\nRules:\n- Do not change the ranked customer order.\n- Use the evidence already provided in customer_rankings as the basis for complaint_evidence and transcript_evidence.\n- related_loans should list the customer's loan ids from financial_loans.\n- related_officers should list officer names when officer IDs are available, otherwise NONE.\n- If there are no matches, return matched_customers 0 and explain that no strong semantic matches were found.\n- Never fabricate entities or links."
+        }
+      },
+      "id": "9eae0df6-5ec7-4aab-bdc4-c653e71a1607",
+      "name": "Investigation Enrichment Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -992,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c03ebdbb-9f79-41df-bbd4-8ab488473c5c",
+              "name": "text",
+              "type": "string",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a99ef5a2-b002-48ab-a189-6244cd38983d",
+      "name": "Return Investigation Results",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -720,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://host.docker.internal:8080/verticals/mcp",
+        "authentication": "headerAuth",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "21c62612-69c5-4009-91a1-a9480e1e38a4",
+      "name": "MCP Client - Investigation",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        -464,
+        1456
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "yh9OmHU48asuRWZP",
+          "name": "Header Auth account 2"
+        }
+      }
     },
     {
       "parameters": {
@@ -634,14 +805,149 @@
         },
         "options": {}
       },
-      "id": "9d9d2780-c402-4ced-b581-9d1cb79a8de1",
+      "id": "064a2366-57f8-49fd-bfbe-a5c5308e9eb3",
       "name": "OpenAI Chat Model - Credit",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        -672,
-        3040
+        -112,
+        880
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Kr0MgsW8AqSKQdic",
+          "name": "OpenAiKey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://host.docker.internal:8008/mcp",
+        "authentication": "headerAuth",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "55dbf438-c19e-4cb4-b840-14ff54eb7869",
+      "name": "MCP Client - AI SDK",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        -464,
+        1824
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "yh9OmHU48asuRWZP",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "You are the Denodo AI SDK RAG agent for this workflow. Pass the user request through the AI SDK MCP tools and let the SDK decide whether this is a metadata question, a data question, or a clarification turn. Follow-up messages in this session stay on the RAG route until the user explicitly resets the conversation. If the SDK needs clarification, return that question directly. If it can answer, return the answer directly. If the workflow passes a rag_session_warning, preserve that warning in a short note before your main reply. Keep the reply concise and grounded. Do not fabricate."
+        }
+      },
+      "id": "ac8719b0-6721-4270-8a2b-fc43510a92c8",
+      "name": "RAG Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -1536,
+        1568
       ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "187d42de-0d78-4f00-a527-36d3652f4c8a",
+              "name": "text",
+              "type": "string",
+              "value": "={{ $(\"Intent Router\").item.json.rag_session_warning ? $(\"Intent Router\").item.json.rag_session_warning + \"\\n\\n\" + $json.output : $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ba13ea78-793b-4bf5-9198-297c4ed577d3",
+      "name": "Return RAG Results",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -848,
+        1520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst sessionId=String($input.first().json.sessionId||'').trim();\nreturn [{json:{text:['RAG conversation ended.','Session lock and chat memory cleared.'+(sessionId?' Session: '+sessionId:''),'Start a new question to route again.'].join('\\n')}}];\n"
+      },
+      "id": "28842d94-7e3b-4abd-b777-bc304500aeb7",
+      "name": "End RAG Session",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1536,
+        1776
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bd8b67e3-57a7-4945-a8a3-4e52760f16eb",
+              "name": "text",
+              "type": "string",
+              "value": "={{ $json.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "11c656fa-86ec-49e9-bad6-43fe0665b301",
+      "name": "Return RAG End",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1264,
+        1776
+      ]
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $(\"Extract Input\").item.json.sessionId || $(\"When chat message received\").item.json.sessionId }}",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -928,
+        1984
+      ],
+      "id": "e3930f48-6ec3-4ae2-bb98-0bab370e769d",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "mode": "delete",
+        "deleteMode": "all"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryManager",
+      "typeVersion": 1.1,
+      "position": [
+        -1264,
+        1776
+      ],
+      "id": "6632fffc-0c04-4dfd-9d5b-11742bc158e3",
+      "name": "Clear RAG Memory",
+      "alwaysOutputData": true
     }
   ],
   "pinData": {},
@@ -701,6 +1007,27 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Investigation Search Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "RAG Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Clear RAG Memory",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -745,6 +1072,21 @@
           },
           {
             "node": "Risk Synthesizer",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Investigation Search Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Investigation Enrichment Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "RAG Agent",
             "type": "ai_languageModel",
             "index": 0
           }
@@ -818,11 +1160,6 @@
             "index": 0
           }
         ]
-      ]
-    },
-    "Property Analyst": {
-      "main": [
-        []
       ]
     },
     "Set Property Context": {
@@ -922,44 +1259,126 @@
           }
         ]
       ]
+    },
+    "Investigation Search Agent": {
+      "main": [
+        [
+          {
+            "node": "Rank Investigation Matches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rank Investigation Matches": {
+      "main": [
+        [
+          {
+            "node": "Investigation Enrichment Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Investigation Enrichment Agent": {
+      "main": [
+        [
+          {
+            "node": "Return Investigation Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client - Investigation": {
+      "ai_tool": [
+        [
+          {
+            "node": "Investigation Search Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Investigation Enrichment Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client - AI SDK": {
+      "ai_tool": [
+        [
+          {
+            "node": "RAG Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG Agent": {
+      "main": [
+        [
+          {
+            "node": "Return RAG Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "End RAG Session": {
+      "main": [
+        [
+          {
+            "node": "Return RAG End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "RAG Agent",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Clear RAG Memory",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear RAG Memory": {
+      "main": [
+        [
+          {
+            "node": "End RAG Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate",
-    "availableInMCP": false
+    "binaryMode": "separate"
   },
-  "versionId": "f0c44324-cf4b-414e-91ff-efd5d67071ec",
+  "versionId": "5f5818d8-874a-4af3-98b5-6dc2275d4068",
   "meta": {
-    "templateCredsSetupCompleted": true,
     "instanceId": "4b247cdb6eedc0b49da9b0ddd265f19d0c2a2839049a74cb18bc66cbc1f07a77"
   },
-  "id": "lM6azNe4F0EXjKHB",
-  "tags": [
-    {
-      "updatedAt": "2026-03-27T22:22:37.174Z",
-      "createdAt": "2026-03-27T22:22:37.174Z",
-      "id": "1mS4u2NbGhGJrLbW",
-      "name": "multi-flow"
-    },
-    {
-      "updatedAt": "2026-03-27T15:21:44.127Z",
-      "createdAt": "2026-03-27T15:21:44.127Z",
-      "id": "daQe4IluAqXHeT4N",
-      "name": "loan-decision"
-    },
-    {
-      "updatedAt": "2026-03-27T15:21:44.133Z",
-      "createdAt": "2026-03-27T15:21:44.133Z",
-      "id": "n9OjDJKIJJlHvv44",
-      "name": "denodo-mcp"
-    },
-    {
-      "updatedAt": "2026-03-27T15:21:44.131Z",
-      "createdAt": "2026-03-27T15:21:44.131Z",
-      "id": "sgUZta2wiMDs1fr6",
-      "name": "agentic-ai"
-    }
-  ]
+  "id": "xkkaSPWqpXflDhhl",
+  "tags": []
 }

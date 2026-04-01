@@ -7,9 +7,9 @@ This repository contains agentic AI workflow demos for financial services, built
 - `Denodo` as the virtualized data layer
 - `MCP` for tool access from workflow agents
 
-The project is centered around practical workflow demos such as loan analysis, servicing, and compliance review, with supporting demo data, setup guides, and workflow exports.
+The project focuses on practical workflow demos such as loan analysis, servicing, compliance review, investigation, and an in-progress Denodo AI SDK RAG path.
 
-## What’s In This Repo
+## What's In This Repo
 
 The main assets in this repository are:
 
@@ -26,9 +26,9 @@ The main assets in this repository are:
 
 ## Key Workflows
 
-### 1. Original working multi-tree flow
+### 1. Structured multi-node flow
 
-- [Loan Agent Flow - Multi-Tree with same MCP and openAI model.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model.json)
+- [multi-node-structured-flow.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-structured-flow.json)
 
 This is the baseline working export with three routed branches:
 
@@ -36,9 +36,9 @@ This is the baseline working export with three routed branches:
 - `existing_loan`
 - `compliance`
 
-### 2. Compliance-enhanced fork
+### 2. Unstructured-data fork
 
-- [Loan Agent Flow - Multi-Tree with same MCP and openAI model - v2.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model%20-%20v2.json)
+- [multi-node-unstructured-added.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-unstructured-added.json)
 
 This keeps the same 3-branch shape and extends the compliance branch to explicitly use:
 
@@ -47,13 +47,24 @@ This keeps the same 3-branch shape and extends the compliance branch to explicit
 
 ### 3. Investigation-enhanced fork
 
-- [Loan Agent Flow - Multi-Tree with same MCP and openAI model - v3.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model%20-%20v3.json)
+- [multi-node-unstructured-v2-(query using transcript or complaints).json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-unstructured-v2-%28query%20using%20transcript%20or%20complaints%29.json)
 
-This keeps the `v2` compliance behavior and adds a fourth branch:
+This keeps the unstructured compliance behavior and adds a fourth branch:
 
 - `investigation`
 
 That branch works backward from complaint/transcript evidence to related customers, loans, and officers.
+For semantic lookup, Denodo handles query-text embedding internally via:
+
+- `vector_distance("embedding", 'input text')`
+
+### 4. RAG work in progress
+
+- [multi-node-with-rag-added-(almost-working).json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-with-rag-added-%28almost-working%29.json)
+- [multi-node-with-rag-session-lock-candidate.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/multi-node-with-rag-session-lock-candidate.json)
+
+These are active work-in-progress variants for Denodo AI SDK RAG routing.
+Use them for iterative validation, not as the canonical demo baseline yet.
 
 ## Architecture
 
@@ -79,6 +90,10 @@ For the multi-node flow, the specialist branches are:
   - `Loan Servicing Agent`
 - compliance:
   - `AML/KYC Agent`
+- investigation:
+  - complaint/transcript-led customer discovery
+- RAG:
+  - Denodo AI SDK MCP experiments
 
 ## Data Layer
 
@@ -103,11 +118,11 @@ Schema reference:
 
 ### Quick start
 
-For the original setup path:
+For the base setup path:
 
 - [SETUP.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/SETUP.md)
 
-For the current multi-node workflow:
+For the current multi-node workflow setup:
 
 - [SETUP-MULTI-NODE.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/SETUP-MULTI-NODE.md)
 
@@ -115,11 +130,12 @@ The multi-node guide covers:
 
 - starting `n8n`
 - configuring the Denodo MCP server
-- importing the workflow JSON
+- importing the current workflow JSON files
 - wiring OpenAI credentials
 - wiring MCP header auth
 - applying demo SQL data fixes
-- validating all six branch outcomes
+- validating the stable deterministic branches
+- testing the RAG work-in-progress variants separately
 
 ## Demo Data and Testing
 
@@ -148,7 +164,8 @@ This is the canonical demo script for the current workflow variants and includes
 - expected branch routing
 - expected terminal nodes
 - presenter talking points
-- the `v3` investigation scenario
+- the current investigation scenario
+- notes for the current RAG work-in-progress flow
 
 ## Typical Test Prompts
 
@@ -174,6 +191,10 @@ Run AML review for customer 21001
 Find customers complaining about high mortgage rates
 ```
 
+```text
+What loan related tables are available
+```
+
 ## Endpoints
 
 Typical local endpoints used during setup and demo:
@@ -185,9 +206,10 @@ Typical local endpoints used during setup and demo:
 
 ## Notes
 
-- The project’s workflow behavior should come from the data and the workflow structure, not from hidden prompt hacks.
+- The project's workflow behavior should come from the data and the workflow structure, not from hidden prompt hacks.
 - Demo inserts for complaints and transcripts use `embed_ai(...)` so embedding columns are populated when supported by the underlying Denodo/Postgres path.
-- Older migration notes and superseded demo scripts have been moved under `docs/archive/` and `demo/archive/` for manual review.
+- At query time, the current Denodo vector-search syntax is `vector_distance("embedding", 'input text')`; the query text does not need an explicit `embed_ai(...)` wrapper.
+- Denodo AI SDK RAG integration is currently a work in progress. The RAG workflow exports in `workflows/` are testing artifacts until session-pinning and reset behavior are fully confirmed.
 
 ## Codex and Claude Repo Instructions
 

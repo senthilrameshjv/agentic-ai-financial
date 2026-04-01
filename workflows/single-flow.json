@@ -1,0 +1,386 @@
+{
+  "name": "Single Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "4b551263-5dd5-4c5b-8ac0-0fb2ba8845d9",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -352,
+        -256
+      ],
+      "webhookId": "loan-agent-chat"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-chat-input",
+              "name": "chatInput",
+              "value": "={{ $json.chatInput }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "46bf2d68-af4c-4543-9a3e-cc19f8fb6274",
+      "name": "Set: Extract chatInput",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -128,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Credit Analyst agent in an autonomous loan decision workflow.\nYour job is to assess the creditworthiness of a specific customer using real-time data from Denodo.\n\n## Your Scope\nYou handle ONLY credit assessment. Do not assess payments, property, or make a final decision.\n\n## Your Task\nExtract the customer_id from the conversation (e.g. 20000), then run these steps:\n\nStep 1 - Call query_financial_customers with:\n  where_clause: \"customer_id\" = CUSTOMER_ID\n\nStep 2 - From the result, note the loan details. Then call query_financial_loans with:\n  where_clause: \"customer_id\" = CUSTOMER_ID\n\nStep 3 - From the loan result, note the loan_id. Then call query_financial_underwriting with:\n  where_clause: \"loan_id\" = LOAN_ID\n\nReplace CUSTOMER_ID and LOAN_ID with the actual values.\nNote: Always wrap column names in double quotes in where_clause (e.g. \"customer_id\" = 20000).\n\n## Credit Score Bands\n800+    -> Excellent\n740-799 -> Good\n670-739 -> Fair\n<670    -> Poor\n\n## Output Format\nEnd your turn with this exact block (all values from tool results only):\n\nCREDIT_ANALYSIS:\n  customer_id:        [value]\n  full_name:          [first_name last_name]\n  credit_score:       [value] ([band])\n  employment_history: [value]\n  financial_history:  [value]\n  loyalty_tier:       [loyalty_classification]\n  income_band:        [income_band]\n  risk_weighting:     [risk_weighting]\n  loan_amount:        [loan_amount]\n  interest_rate:      [interest_rate]\n  credit_verdict:     [STRONG / ACCEPTABLE / WEAK / INSUFFICIENT_DATA]\n\n## Hard Rules\n- Never fabricate data. Every value must come from a tool result.\n- If data is missing, set credit_verdict to INSUFFICIENT_DATA and explain.\n- Temperature is 0."
+        }
+      },
+      "id": "5fbca8bf-6143-4628-8aef-5ee96dad69b5",
+      "name": "AI Agent: Credit Analyst",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        96,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.1",
+          "mode": "list",
+          "cachedResultName": "gpt-5.1"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "7c1279a7-5502-4bf2-9d6d-89775b9e1639",
+      "name": "OpenAI: Credit Analyst",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        528,
+        64
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Kr0MgsW8AqSKQdic",
+          "name": "OpenAiKey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-credit-context",
+              "name": "combined",
+              "value": "={{ $('Set: Extract chatInput').item.json.chatInput }}\n\nCREDIT_ANALYSIS OUTPUT:\n{{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "41168d6b-6e3a-4977-b21a-8bab9db89bae",
+      "name": "Set: Credit Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.combined }}",
+        "options": {
+          "systemMessage": "You are the Payment History Analyst agent in an autonomous loan decision workflow.\nYour job is to assess payment reliability and existing debt obligations using real-time data from Denodo.\n\n## Your Scope\nYou handle ONLY payment history and debt load. Do not repeat credit work.\n\n## Your Task\nThe customer_id is in the conversation context from the CREDIT_ANALYSIS block.\n\nStep 1 - Call query_financial_loans with:\n  where_clause: \"customer_id\" = CUSTOMER_ID\n\nStep 2 - From the result, note the loan_id(s). Then call query_financial_payments with:\n  where_clause: \"loan_id\" = LOAN_ID\n\nReplace CUSTOMER_ID and LOAN_ID with the actual values.\nNote: Always wrap column names in double quotes in where_clause (e.g. \"customer_id\" = 20000).\n\n## Assessment Rules\n0 missed/late payments   -> Reliable\n1-2 missed payments      -> Minor Concerns\n3+ missed payments       -> High Risk\nNo payment records found -> INSUFFICIENT_DATA\n\n## Output Format\nEnd your turn with this exact block:\n\nPAYMENT_ANALYSIS:\n  customer_id:          [value]\n  total_loans:          [count]\n  total_debt_exposure:  [sum of loan_amount]\n  active_loans:         [count with status active or approved]\n  missed_payments:      [count or UNKNOWN if no payment data]\n  payment_reliability:  [Reliable / Minor Concerns / High Risk / INSUFFICIENT_DATA]\n  dti_flag:             [LOW / MEDIUM / HIGH / UNKNOWN]\n  payment_verdict:      [STRONG / ACCEPTABLE / WEAK / INSUFFICIENT_DATA]\n\n## Hard Rules\n- Never fabricate data. Every value must come from a tool result.\n- If payment data is unavailable, set payment_verdict to INSUFFICIENT_DATA.\n- Temperature is 0."
+        }
+      },
+      "id": "f7151786-d3e1-4c47-9957-44f41905dbdd",
+      "name": "AI Agent: Payment History Analyst",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        672,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-payment-context",
+              "name": "combined",
+              "value": "={{ $('Set: Extract chatInput').item.json.chatInput }}\n\nCREDIT_ANALYSIS OUTPUT:\n{{ $('AI Agent: Credit Analyst').item.json.output }}\n\nPAYMENT_ANALYSIS OUTPUT:\n{{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "09e29a98-4686-4c1e-b22e-c03cb7936dd3",
+      "name": "Set: Payment Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1024,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.combined }}",
+        "options": {
+          "systemMessage": "You are the Property Analyst agent in an autonomous loan decision workflow.\nYour job is to assess collateral quality using property data from Denodo.\n\n## Your Scope\nYou handle ONLY property and collateral assessment. Do not repeat credit or payment work.\n\n## Your Task\nThe customer_id is in the conversation context from the CREDIT_ANALYSIS block.\n\nStep 1 - Call query_financial_loans with:\n  where_clause: \"customer_id\" = CUSTOMER_ID\n\nStep 2 - From the result, note the property_id. Then call query_financial_properties with:\n  where_clause: \"property_id\" = PROPERTY_ID\n\nReplace CUSTOMER_ID and PROPERTY_ID with the actual values.\nNote: Always wrap column names in double quotes in where_clause (e.g. \"customer_id\" = 20000).\n\nStep 3 - Calculate LTV: (loan_amount / property_value) * 100\n\n## LTV Risk Bands\n< 70%  -> LOW risk\n70-90% -> MEDIUM risk\n> 90%  -> HIGH risk\n\n## Output Format\nEnd your turn with this exact block:\n\nPROPERTY_ANALYSIS:\n  customer_id:       [value]\n  loan_amount:       [value]\n  property_value:    [value or UNKNOWN]\n  ltv_ratio:         [calculated % or UNKNOWN]\n  ltv_risk:          [LOW / MEDIUM / HIGH / UNKNOWN]\n  collateral_rating: [STRONG / ACCEPTABLE / WEAK / INSUFFICIENT_DATA]\n  property_verdict:  [STRONG / ACCEPTABLE / WEAK / INSUFFICIENT_DATA]\n\n## Hard Rules\n- Never fabricate data. Every value must come from a tool result.\n- If property data is missing, set property_verdict to INSUFFICIENT_DATA.\n- Temperature is 0."
+        }
+      },
+      "id": "c0baaeb6-7d6f-4971-b30e-d71ae292a727",
+      "name": "AI Agent: Property Analyst",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1248,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-property-context",
+              "name": "combined",
+              "value": "={{ $('Set: Extract chatInput').item.json.chatInput }}\n\nCREDIT_ANALYSIS OUTPUT:\n{{ $('AI Agent: Credit Analyst').item.json.output }}\n\nPAYMENT_ANALYSIS OUTPUT:\n{{ $('AI Agent: Payment History Analyst').item.json.output }}\n\nPROPERTY_ANALYSIS OUTPUT:\n{{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "98650e2c-3da9-4301-aea7-d7ea359d6b76",
+      "name": "Set: Property Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1600,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.combined }}",
+        "options": {
+          "systemMessage": "You are the Risk Synthesizer - the final decision-maker in an autonomous loan decision workflow.\nYour job is to read the outputs of the three prior agents and produce a definitive Loan Decision Brief.\n\n## Your Scope\nYou synthesize. Do NOT re-query credit, payment, or property data.\nYour only tool call is to fetch the current rate.\n\n## Your Task\nStep 1 - Read the CREDIT_ANALYSIS, PAYMENT_ANALYSIS, and PROPERTY_ANALYSIS blocks from the conversation history.\n\nStep 2 - Fetch the best available mortgage rate. Call query_financial_rates with no arguments (returns all rates).\nPick the row where loan_type = 'Mortgage' with the lowest interest_rate.\n\nStep 3 - Apply decision logic:\n\nAPPROVE if ALL of:\n- credit_verdict is STRONG or ACCEPTABLE\n- payment_verdict is STRONG or ACCEPTABLE\n- property_verdict is STRONG or ACCEPTABLE\n- ltv_ratio < 90%\n\nDECLINE if ANY of:\n- credit_verdict is WEAK\n- payment_verdict is HIGH RISK\n- ltv_ratio > 95%\n\nREFER TO UNDERWRITER if anything in between (mixed signals, missing data, borderline LTV, any INSUFFICIENT_DATA verdict).\n\n## Output Format\n\n==============================\nLOAN DECISION BRIEF\n==============================\nCustomer:         [full_name] | ID: [customer_id] | Tier: [loyalty_tier]\nRequested Amount: $[loan_amount] | Rate on File: [interest_rate]%\n\nCREDIT ANALYSIS\n  Credit Score:      [credit_score] ([band])\n  Employment:        [employment_history]\n  Financial History: [financial_history]\n\nPAYMENT HISTORY\n  Payment Reliability: [payment_reliability]\n  Total Debt Exposure: $[total_debt_exposure]\n  Missed Payments:     [missed_payments]\n  DTI Flag:            [dti_flag]\n\nPROPERTY / COLLATERAL\n  Property Value:  $[property_value]\n  LTV Ratio:       [ltv_ratio]% ([ltv_risk])\n  Collateral Risk: [collateral_rating]\n\nDECISION\n  Outcome:         [APPROVE / DECLINE / REFER TO UNDERWRITER]\n  Suggested Rate:  [interest_rate]% ([loan_type], [term]yr)\n  Rationale:       [2-3 sentences citing the verdicts from all three agents]\n  Conditions:      [any conditions, or None]\n==============================\n\nThis decision brief was produced by 4 specialized agents working autonomously - each querying Denodo in real-time. Zero data copies, one trigger.\n\n## Hard Rules\n- Never fabricate data. Every field must come from tool results or prior agent outputs.\n- If any prior agent block is missing, state which data is absent and issue REFER TO UNDERWRITER.\n- Temperature is 0."
+        }
+      },
+      "id": "dfe419ae-cec9-407f-80e2-c713a074a97c",
+      "name": "AI Agent: Risk Synthesizer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1824,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://host.docker.internal:8080/verticals/mcp",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        992,
+        96
+      ],
+      "id": "6f6d845b-ed51-4a66-86c5-73b6dbb502fb",
+      "name": "MCP Client2",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "yh9OmHU48asuRWZP",
+          "name": "Header Auth account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set: Extract chatInput",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Extract chatInput": {
+      "main": [
+        [
+          {
+            "node": "AI Agent: Credit Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI: Credit Analyst": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent: Credit Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI Agent: Payment History Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI Agent: Property Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI Agent: Risk Synthesizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent: Credit Analyst": {
+      "main": [
+        [
+          {
+            "node": "Set: Credit Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Credit Context": {
+      "main": [
+        [
+          {
+            "node": "AI Agent: Payment History Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent: Payment History Analyst": {
+      "main": [
+        [
+          {
+            "node": "Set: Payment Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Payment Context": {
+      "main": [
+        [
+          {
+            "node": "AI Agent: Property Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent: Property Analyst": {
+      "main": [
+        [
+          {
+            "node": "Set: Property Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Property Context": {
+      "main": [
+        [
+          {
+            "node": "AI Agent: Risk Synthesizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client2": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent: Credit Analyst",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "AI Agent: Payment History Analyst",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "AI Agent: Property Analyst",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "AI Agent: Risk Synthesizer",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent: Risk Synthesizer": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "afcd6486-6ea0-4a37-a686-5d50cb97639a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4b247cdb6eedc0b49da9b0ddd265f19d0c2a2839049a74cb18bc66cbc1f07a77"
+  },
+  "id": "oDM7HqeKBK8ffPB1",
+  "tags": []
+}
