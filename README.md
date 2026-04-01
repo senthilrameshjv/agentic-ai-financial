@@ -26,38 +26,34 @@ The main assets in this repository are:
 
 ## Key Workflows
 
-### 1. Multi-node loan workflow
+### 1. Original working multi-tree flow
 
-Primary workflow file:
+- [Loan Agent Flow - Multi-Tree with same MCP and openAI model.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model.json)
 
-- [loan-agent-flow-v2-multi-tree.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/loan-agent-flow-v2-multi-tree.json)
-
-This workflow routes a chat request into one of three branches:
+This is the baseline working export with three routed branches:
 
 - `new_loan`
 - `existing_loan`
 - `compliance`
 
-It is designed to reach these terminal outcomes:
+### 2. Compliance-enhanced fork
 
-- `Risk Synthesizer`
-- `Flag for Human Review`
-- `Loan Status OK`
-- `Escalate to Collections`
-- `Compliance Cleared`
-- `File SAR Report`
+- [Loan Agent Flow - Multi-Tree with same MCP and openAI model - v2.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model%20-%20v2.json)
 
-Reference export:
+This keeps the same 3-branch shape and extends the compliance branch to explicitly use:
 
-- [Loan Agent Flow - Multi-Tree with same MCP and openAI model.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model.json)
+- `customer_complaints`
+- `officer_transcripts`
 
-### 2. Earlier single-path loan workflow notes
+### 3. Investigation-enhanced fork
 
-There is also a simpler loan-flow README in:
+- [Loan Agent Flow - Multi-Tree with same MCP and openAI model - v3.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model%20-%20v3.json)
 
-- [workflows/README.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/README.md)
+This keeps the `v2` compliance behavior and adds a fourth branch:
 
-That file documents the earlier sequential loan-decision pattern and is useful as background, but the multi-node workflow above is the current main demo path.
+- `investigation`
+
+That branch works backward from complaint/transcript evidence to related customers, loans, and officers.
 
 ## Architecture
 
@@ -142,22 +138,21 @@ Important files:
 
 ## Demo Scripts
 
-For running the live workflow demo, use:
+For the current live workflow demo, use:
 
-- [demo-script-multi-node.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/demo-script-multi-node.md)
-- [demo-multi-node-flow.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/demo-multi-node-flow.md)
+- [demo-script-multi-node-v2.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/demo-script-multi-node-v2.md)
 
-These include:
+This is the canonical demo script for the current workflow variants and includes:
 
 - exact prompts to type into the n8n chat UI
 - expected branch routing
 - expected terminal nodes
 - presenter talking points
-- pre-patch and post-patch flow expectations
+- the `v3` investigation scenario
 
 ## Typical Test Prompts
 
-Examples for the multi-node flow:
+Examples for the current workflow variants:
 
 ```text
 Analyze customer 18926 for loan eligibility
@@ -175,6 +170,10 @@ Check payment status for customer 20000
 Run AML review for customer 21001
 ```
 
+```text
+Find customers complaining about high mortgage rates
+```
+
 ## Endpoints
 
 Typical local endpoints used during setup and demo:
@@ -188,7 +187,7 @@ Typical local endpoints used during setup and demo:
 
 - The project’s workflow behavior should come from the data and the workflow structure, not from hidden prompt hacks.
 - Demo inserts for complaints and transcripts use `embed_ai(...)` so embedding columns are populated when supported by the underlying Denodo/Postgres path.
-- Some docs folders are intentionally Git-ignored by default, so selected docs may be force-added when they are meant to ship with the workflow package.
+- Older migration notes and superseded demo scripts have been moved under `docs/archive/` and `demo/archive/` for manual review.
 
 ## Codex and Claude Repo Instructions
 

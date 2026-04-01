@@ -13,9 +13,12 @@ generate_docx.py
 
 # Demo and workflow variants
 demo copy/
+demo/archive/
 docs/
+docs/archive/
 workflows/comparision/
 workflows/archived/
+workflows/archive/
 
 # Config and local changes
 denodo-mcp-server/

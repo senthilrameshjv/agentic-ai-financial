@@ -35,11 +35,11 @@ That branch accepts topic-led prompts without a customer id and works backward f
 Use the workflow that matches the scenario you want to demo:
 
 - original working multi-tree flow:
-  - [Loan Agent Flow - Multi-Tree with same MCP and openAI model.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model.json)
+  - [Loan Agent Flow - Multi-Tree with same MCP and openAI model.json](workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model.json)
 - compliance-enhanced fork:
-  - [Loan Agent Flow - Multi-Tree with same MCP and openAI model - v2.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model%20-%20v2.json)
+  - [Loan Agent Flow - Multi-Tree with same MCP and openAI model - v2.json](workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model%20-%20v2.json)
 - investigation-enhanced fork:
-  - [Loan Agent Flow - Multi-Tree with same MCP and openAI model - v3.json](C:/Senthil/Projects/github-projects/agentic-ai-financial/workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model%20-%20v3.json)
+  - [Loan Agent Flow - Multi-Tree with same MCP and openAI model - v3.json](workflows/Loan%20Agent%20Flow%20-%20Multi-Tree%20with%20same%20MCP%20and%20openAI%20model%20-%20v3.json)
 
 Recommended default:
 
@@ -314,12 +314,8 @@ Best expected customer:
 
 - setup flow:
   - [SETUP.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/SETUP.md)
-- multi-node demo script:
-  - [demo-script-multi-node.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/demo-script-multi-node.md)
-- updated compliance plus investigation demo script:
+- canonical current demo script:
   - [demo-script-multi-node-v2.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/demo-script-multi-node-v2.md)
-- multi-node runbook:
-  - [demo-multi-node-flow.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/demo/demo-multi-node-flow.md)
 - gap analysis:
   - [multi-tree-flow-gap-analysis.md](C:/Senthil/Projects/github-projects/agentic-ai-financial/docs/multi-tree-flow-gap-analysis.md)
 
