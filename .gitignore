@@ -24,5 +24,11 @@ workflows/archive/
 denodo-mcp-server/
 AGENTS.md
 CLAUDE.md
+CLUADE.md
+CLAUDE.md.example
 GEMINI.md
+.omx/
+.agents/
+.claude/
+.scripts/
 agents/retention-agent-system-prompt.md

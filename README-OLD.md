@@ -24,32 +24,47 @@ The main assets in this repository are:
 - `views.md`
   - reference for the Denodo financial views used by the workflows
 
+## Key Workflows
 
-### 1. Structured and Unstructured Mulit Node workflow
+### 1. Structured multi-node flow
 
-- [final-workflow-with-unstructured.json](workflows/final-workflow-with-unstructured.json)
+- [multi-node-structured-flow.json](workflows/multi-node-structured-flow.json)
 
-Following workflows are supported
+This is the baseline working export with three routed branches:
 
 - `new_loan`
 - `existing_loan`
-- `compliance` (including `officer_transcripts` and `customer_complaints`)
+- `compliance`
+
+### 2. Unstructured-data fork
+
+- [multi-node-unstructured-added.json](workflows/multi-node-unstructured-added.json)
+
+This keeps the same 3-branch shape and extends the compliance branch to explicitly use:
+
+- `customer_complaints`
+- `officer_transcripts`
+
+### 3. Investigation-enhanced fork
+
+- [multi-node-unstructured-v2-(query using transcript or complaints).json](workflows/multi-node-unstructured-v2-%28query%20using%20transcript%20or%20complaints%29.json)
+
+This keeps the unstructured compliance behavior and adds a fourth branch:
+
 - `investigation`
 
+That branch works backward from complaint/transcript evidence to related customers, loans, and officers.
 For semantic lookup, Denodo handles query-text embedding internally via:
 
 - `vector_distance("embedding", 'input text')`
 
-### 2. RAG work in progress
+### 4. RAG work in progress
 
-- Workflows in WIP folder are not complete yet. It was an attempt to include RAG into this mix, but its better to leave deterministic VDP server MCP at this point. 
+- [multi-node-with-rag-added-(almost-working).json](workflows/multi-node-with-rag-added-%28almost-working%29.json)
+- [multi-node-with-rag-session-lock-candidate.json](workflows/multi-node-with-rag-session-lock-candidate.json)
 
 These are active work-in-progress variants for Denodo AI SDK RAG routing.
 Use them for iterative validation, not as the canonical demo baseline yet.
-
-### 3. Staging Workflow
-
-- Workflows in /staging-workflows folder were the iterative development from single node to structured multi node to inclusion of unstructured multi node. If anyone interested in more simpler worfklow or take a minimal base to begin working, they can help. 
 
 ## Architecture
 
@@ -77,7 +92,7 @@ For the multi-node flow, the specialist branches are:
   - `AML/KYC Agent`
 - investigation:
   - complaint/transcript-led customer discovery
-- RAG: (work in progress)
+- RAG:
   - Denodo AI SDK MCP experiments
 
 ## Data Layer
@@ -99,14 +114,14 @@ Schema reference:
 
 - [views.md](views.md)
 
-## Setup 
+## Setup
 
 ### Quick start
 
 
 For the current multi-node workflow setup:
 
-- [SETUP.md](SETUP.md)
+- [SETUP-MULTI-NODE.md](SETUP-MULTI-NODE.md)
 
 The multi-node guide covers:
 
@@ -149,7 +164,7 @@ This is the canonical demo script for the current workflow variants and includes
 - the current investigation scenario
 - notes for the current RAG work-in-progress flow
 
-## Typical Test Prompts (also available at demo/test-prompts.md)
+## Typical Test Prompts
 
 Examples for the current workflow variants:
 
@@ -191,6 +206,13 @@ Typical local endpoints used during setup and demo:
 - The project's workflow behavior should come from the data and the workflow structure, not from hidden prompt hacks.
 - Demo inserts for complaints and transcripts use `embed_ai(...)` so embedding columns are populated when supported by the underlying Denodo/Postgres path.
 - At query time, the current Denodo vector-search syntax is `vector_distance("embedding", 'input text')`; the query text does not need an explicit `embed_ai(...)` wrapper.
-- Denodo AI SDK RAG integration is currently a work in progress. The RAG workflow exports in `workflows/wip` are testing artifacts until session-pinning and reset behavior are fully confirmed.
+- Denodo AI SDK RAG integration is currently a work in progress. The RAG workflow exports in `workflows/` are testing artifacts until session-pinning and reset behavior are fully confirmed.
 
+## Codex and Claude Repo Instructions
 
+This repository also contains local AI-assistant guidance files:
+
+- [AGENTS.md](AGENTS.md)
+- [CLAUDE.md](CLAUDE.md)
+
+Those files are for repository-aware coding assistants and are not the primary product documentation for the workflow demos.
