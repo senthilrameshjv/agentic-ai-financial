@@ -1,4 +1,4 @@
-# Agentic AI Financial Workflows
+# Agentic AI Financial Workflows 
 
 This repository contains agentic AI workflow demos for financial services, built primarily on:
 

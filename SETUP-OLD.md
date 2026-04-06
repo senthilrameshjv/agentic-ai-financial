@@ -10,11 +10,14 @@
 
 ## What This Setup Enables
 
-The following branching are supported
+The base multi-node design supports three routed branches:
 
 - `new_loan`
 - `existing_loan`
 - `compliance`
+
+The current repo variants extend that baseline with:
+
 - `investigation`
   - topic-led customer discovery from complaints and transcripts
 - `rag_discovery`
@@ -26,7 +29,24 @@ For semantic lookup in the investigation branch, the current Denodo query shape 
 
 ## Workflow Files
 
-Refer workflows/final-workflow-with-unstructured.json for the final flow. You can refer to workflows/staging-workflows for iterative workflows if you need any previous version. 
+Use the workflow that matches the scenario you want to demo or test:
+
+- stable structured baseline:
+  - [multi-node-structured-flow.json](workflows/multi-node-structured-flow.json)
+- stable unstructured compliance variant:
+  - [multi-node-unstructured-added.json](workflows/multi-node-unstructured-added.json)
+- stable investigation variant:
+  - [multi-node-unstructured-v2-(query using transcript or complaints).json](workflows/multi-node-unstructured-v2-%28query%20using%20transcript%20or%20complaints%29.json)
+- RAG work in progress:
+  - [multi-node-with-rag-added-(almost-working).json](workflows/multi-node-with-rag-added-%28almost-working%29.json)
+  - [multi-node-with-rag-session-lock-candidate.json](workflows/multi-node-with-rag-session-lock-candidate.json)
+
+Recommended default:
+
+- use `multi-node-structured-flow.json` for the baseline deterministic flow
+- use `multi-node-unstructured-added.json` when you want the compliance branch to use complaints and transcripts
+- use `multi-node-unstructured-v2-(query using transcript or complaints).json` when you also want the investigation branch
+- use `multi-node-with-rag-session-lock-candidate.json` only when actively testing the RAG follow-up and reset behavior
 
 ## Steps
 
@@ -92,14 +112,23 @@ Expected endpoint in the current RAG candidates:
 ### 7. Initialize n8n
 
 - Open [http://localhost:5678](http://localhost:5678)
-- Create the admin user if this is a fresh install (Dont forget the password, it can't be recovered)
+- Create the admin user if this is a fresh install
 
 ### 8. Import the workflow variant you want
 
 - Go to **Workflows**
 - Choose **Import from File**
-- Import workflows/final-workflow-with-unstructured.json
+- Import one of:
+  - [multi-node-structured-flow.json](workflows/multi-node-structured-flow.json)
+  - [multi-node-unstructured-added.json](workflows/multi-node-unstructured-added.json)
+  - [multi-node-unstructured-v2-(query using transcript or complaints).json](workflows/multi-node-unstructured-v2-%28query%20using%20transcript%20or%20complaints%29.json)
+  - [multi-node-with-rag-session-lock-candidate.json](workflows/multi-node-with-rag-session-lock-candidate.json)
 
+Notes:
+
+- `multi-node-unstructured-added.json` extends compliance with complaints and transcripts
+- `multi-node-unstructured-v2-(query using transcript or complaints).json` adds investigation
+- `multi-node-with-rag-session-lock-candidate.json` is a work-in-progress RAG test export and is not yet the canonical stable demo workflow
 
 ### 9. Configure OpenAI in n8n
 
@@ -118,6 +147,9 @@ Expected endpoint in the current RAG candidates:
 
   Change the above base64 encoded value if you are going to use different user than admin:admin using https://mixedanalytics.com/tools/basic-authentication-generator/
 
+If you imported the RAG candidate, also verify:
+
+- `MCP Client - AI SDK`
 
 ### 11. Activate the workflow
 
@@ -128,15 +160,16 @@ Expected endpoint in the current RAG candidates:
 
 Run:
 
-- [multi-tree-flow-data-fixes.sql](demo/multi-tree-flow-data-fixes.sql) (if there are any errors in delete statements, they can be ignored. Its possibly deleting some of the fixes i did during testing)
+- [multi-tree-flow-data-fixes.sql](demo/multi-tree-flow-data-fixes.sql)
 
 Notes:
 
 - This patch keeps each branch scenario isolated.
 - It uses `embed_ai('<text>')` for complaint and transcript inserts so the embedding columns are populated on insert.
 - At query time, Denodo internally handles embedding of the search text inside `vector_distance("embedding", 'input text')`.
+- If your source schema does not yet allow `status = 'defaulted'`, add that allowed value first before running the servicing-negative part of the patch.
 
-## Stable Test Prompts (also available at demo/test-prompts.md)
+## Stable Test Prompts
 
 ### New loan positive
 
