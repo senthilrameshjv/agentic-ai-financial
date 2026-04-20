@@ -1,0 +1,168 @@
+# Generated with Denodo Platform 9.4.0.
+# Generated with Denodo Platform 9.4.0.
+
+CREATE OR REPLACE TAGS (chatbot_views DESCRIPTION = 'Views that are dedicated for chatbot access', mcp DESCRIPTION = 'Views for Denodo MCP server', unstructured DESCRIPTION = 'Views that support vector databases and contain unstructured data');
+
+CREATE OR REPLACE FOLDER '/Financial Services' DESCRIPTION 'This folder contains all the views for Financial Services' ;
+
+CREATE OR REPLACE FOLDER '/financial services/Banking' ;
+
+CREATE OR REPLACE FOLDER '/financial services/banking/0 - Data Sources' ;
+
+CREATE OR REPLACE FOLDER '/financial services/banking/0 - data sources/Local' ;
+
+CREATE OR REPLACE DATASOURCE JDBC postgresql
+    FOLDER = '/financial services/banking/0 - data sources/local'
+    DRIVERCLASSNAME = 'org.postgresql.Driver'
+    DATABASEURI = 'jdbc:postgresql://localhost:15432/postgres'
+    USERNAME = 'postgres'
+    USERPASSWORD = 'u+TypTXk1T3hMdqcfNHT0iHtcSLVgP2f0o8+KwyMfcb4ZdOD/jrmZzaVautDbJz2QBfZo7zn5oa75wZDRE+khZPp1Tt/WFgUMHu0GjgubOgoUiYRQBmVpnik9OUF6VAur6XuJPtwiIKAy7bsiPM8tw==' ENCRYPTED
+    CLASSPATH = 'postgresql'
+    DATABASENAME = 'postgresql'
+    DATABASEVERSION = '17'
+    FETCHSIZE = 1000
+    VALIDATIONQUERY = 'Select 1'
+    INITIALSIZE = 4
+    MAXIDLE = -1
+    MINIDLE = 0
+    MAXACTIVE = 20
+    EXHAUSTEDACTION = 1
+    TESTONBORROW = true
+    TESTONRETURN = false
+    TESTWHILEIDLE = false
+    TIMEBETWEENEVICTION = -1
+    NUMTESTPEREVICTION = 3
+    MINEVICTABLETIME = 1800000
+    POOLPREPAREDSTATEMENTS = false
+    MAXOPENPREPAREDSTATEMENTS = -1
+    PROPERTIES ('escapeSyntaxCallMode'='callIfNoReturn', 'reWriteBatchedInserts'='true')
+    KERBEROSPROPERTIES ('jaasLogin'='false', 'user'='<user>')
+    DATA_LOAD_CONFIGURATION (
+        BATCHINSERTSIZE = 200
+    );
+
+CREATE OR REPLACE FOLDER '/financial services/banking/3 - Data Products' ;
+
+CREATE OR REPLACE WRAPPER JDBC officer_transcripts
+    FOLDER = '/financial services/banking/3 - data products'
+    DATASOURCENAME=postgresql
+    SCHEMANAME='public' ESCAPE
+    RELATIONNAME='officer_transcripts' 
+    OUTPUTSCHEMA (
+        transcript_id = 'transcript_id' :'java.lang.Long' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='19', sourcetypeid='-5', sourcetypename='bigserial')  NOT NULL SORTABLE IS_AUTOINCREMENT,
+        loan_officer_id = 'loan_officer_id' :'java.lang.Long' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='19', sourcetypeid='-5', sourcetypename='int8')  NOT NULL SORTABLE,
+        customer_id = 'customer_id' :'java.lang.Long' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='19', sourcetypeid='-5', sourcetypename='int8')  NOT NULL SORTABLE,
+        transcript_text = 'transcript_text' :'java.lang.String' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='2147483647', sourcetypeid='12', sourcetypename='text')  NOT NULL SORTABLE,
+        meeting_date = 'meeting_date' :'java.time.LocalDate' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='13', sourcetypeid='91', sourcetypename='date')  NOT NULL SORTABLE,
+        meeting_type = 'meeting_type' :'java.lang.String' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='30', sourcetypeid='12', sourcetypename='varchar')  NOT NULL SORTABLE,
+        embedding = 'embedding' :'com.denodo.vdb.sql.FloatVector' (OPT) (sourcetyperadix='10', sourcetypesize='1536', sourcetypeid='1111', sourcetypename='vector')  NOT SORTABLE
+    )
+    CONSTRAINT 'officer_transcripts_pkey' PRIMARY KEY ( 'transcript_id' )
+    INDEX 'officer_transcripts_pkey' OTHER UNIQUE PRIMARY ( 'transcript_id' )
+    INDEX 'idx_transcripts_customer' OTHER ( 'customer_id' )
+    INDEX 'idx_transcripts_date' OTHER ( 'meeting_date' )
+    INDEX 'idx_transcripts_officer' OTHER ( 'loan_officer_id' );
+
+CREATE OR REPLACE TABLE officer_transcripts I18N es_euro (
+        transcript_id:long (notnull, autoincrement, sourcetypeid = '-5', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '19'),
+        loan_officer_id:long (notnull, sourcetypeid = '-5', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '19'),
+        customer_id:long (notnull, sourcetypeid = '-5', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '19'),
+        transcript_text:text (notnull, sourcetypeid = '-9', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '2147483647'),
+        meeting_date:localdate (notnull, sourcetypeid = '91', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '13'),
+        meeting_type:text (notnull, sourcetypeid = '-9', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '30'),
+        embedding:vector<float,1536> (sourcetypeid = '10006', sourcetyperadix = '10')
+    )
+    FOLDER = '/financial services/banking/3 - data products'
+    DESCRIPTION = 'Contains loan officer meeting transcripts with semantic search capability. Use the embedding column for similarity-based search when looking for transcripts by topic or content. Supports filtering by customer_id, loan_officer_id, meeting_date, and meeting_type.'
+    CONSTRAINT 'officer_transcripts_pkey' PRIMARY KEY ( 'transcript_id' )
+    TAGS (chatbot_views, mcp, unstructured)
+    CACHE OFF
+    TIMETOLIVEINCACHE DEFAULT
+    ADD SEARCHMETHOD officer_transcripts(
+        I18N es_euro
+        CONSTRAINTS (
+             ADD transcript_id (any) OPT ANY
+             ADD loan_officer_id (any) OPT ANY
+             ADD customer_id (any) OPT ANY
+             ADD transcript_text (any) OPT ANY
+             ADD meeting_date (any) OPT ANY
+             ADD meeting_type (any) OPT ANY
+             ADD embedding (any) OPT ANY
+        )
+        OUTPUTLIST (customer_id, embedding, loan_officer_id, meeting_date, meeting_type, transcript_id, transcript_text
+        )
+        WRAPPER (jdbc officer_transcripts)
+    );
+
+
+CREATE OR REPLACE WRAPPER JDBC customer_complaints
+    FOLDER = '/financial services/banking/3 - data products'
+    DATASOURCENAME=postgresql
+    SCHEMANAME='public' ESCAPE
+    RELATIONNAME='customer_complaints' 
+    OUTPUTSCHEMA (
+        complaint_id = 'complaint_id' :'java.lang.Long' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='19', sourcetypeid='-5', sourcetypename='bigserial')  NOT NULL SORTABLE IS_AUTOINCREMENT,
+        customer_id = 'customer_id' :'java.lang.Long' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='19', sourcetypeid='-5', sourcetypename='int8')  NOT NULL SORTABLE,
+        complaint_text = 'complaint_text' :'java.lang.String' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='2147483647', sourcetypeid='12', sourcetypename='text')  NOT NULL SORTABLE,
+        channel = 'channel' :'java.lang.String' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='20', sourcetypeid='12', sourcetypename='varchar')  NOT NULL SORTABLE,
+        complaint_date = 'complaint_date' :'java.time.LocalDate' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='13', sourcetypeid='91', sourcetypename='date')  NOT NULL SORTABLE,
+        resolved = 'resolved' :'java.lang.Boolean' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='1', sourcetypeid='-7', sourcetypename='bool')  NOT NULL NOT SORTABLE,
+        embedding = 'embedding' :'com.denodo.vdb.sql.FloatVector' (OPT) (sourcetyperadix='10', sourcetypesize='1536', sourcetypeid='1111', sourcetypename='vector')  NOT SORTABLE
+    )
+    CONSTRAINT 'customer_complaints_pkey' PRIMARY KEY ( 'complaint_id' )
+    INDEX 'customer_complaints_pkey' OTHER UNIQUE PRIMARY ( 'complaint_id' )
+    INDEX 'idx_complaints_customer' OTHER ( 'customer_id' )
+    INDEX 'idx_complaints_date' OTHER ( 'complaint_date' );
+
+CREATE OR REPLACE TABLE customer_complaints I18N es_euro (
+        complaint_id:long (notnull, autoincrement, sourcetypeid = '-5', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '19'),
+        customer_id:long (notnull, sourcetypeid = '-5', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '19'),
+        complaint_text:text (notnull, sourcetypeid = '-9', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '2147483647'),
+        channel:text (notnull, sourcetypeid = '-9', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '20'),
+        complaint_date:localdate (notnull, sourcetypeid = '91', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '13'),
+        resolved:boolean (notnull, sourcetypeid = '16', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '1'),
+        embedding:vector<float,1536> (embeddingmodel = 'text-embedding-3-small', sourcetypeid = '10006', sourcetyperadix = '10')
+    )
+    FOLDER = '/financial services/banking/3 - data products'
+    DESCRIPTION = 'Contains customer complaint records with semantic search capability. Use the embedding column for similarity-based search when looking for complaints by topic, sentiment, or meaning. Supports filtering by customer_id, channel, complaint_date, and resolved status.'
+    CONSTRAINT 'customer_complaints_pkey' PRIMARY KEY ( 'complaint_id' )
+    TAGS (chatbot_views, mcp, unstructured)
+    CACHE OFF
+    TIMETOLIVEINCACHE DEFAULT
+    ADD SEARCHMETHOD customer_complaints(
+        I18N es_euro
+        CONSTRAINTS (
+             ADD complaint_id (any) OPT ANY
+             ADD customer_id (any) OPT ANY
+             ADD complaint_text (any) OPT ANY
+             ADD channel (any) OPT ANY
+             ADD complaint_date (any) OPT ANY
+             ADD resolved (any) OPT ANY
+             ADD embedding (any) OPT ANY
+        )
+        OUTPUTLIST (channel, complaint_date, complaint_id, complaint_text, customer_id, embedding, resolved
+        )
+        WRAPPER (jdbc customer_complaints)
+    );
+
+# Generated with Denodo Platform 9.4.0.
+
+CREATE OR REPLACE WRAPPER JDBC officer_transcripts
+    FOLDER = '/financial services/banking/3 - data products'
+    DATASOURCENAME=postgresql
+    SCHEMANAME='public' ESCAPE
+    RELATIONNAME='officer_transcripts' 
+    OUTPUTSCHEMA (
+        transcript_id = 'transcript_id' :'java.lang.Long' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='19', sourcetypeid='-5', sourcetypename='bigserial')  NOT NULL SORTABLE IS_AUTOINCREMENT,
+        loan_officer_id = 'loan_officer_id' :'java.lang.Long' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='19', sourcetypeid='-5', sourcetypename='int8')  NOT NULL SORTABLE,
+        customer_id = 'customer_id' :'java.lang.Long' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='19', sourcetypeid='-5', sourcetypename='int8')  NOT NULL SORTABLE,
+        transcript_text = 'transcript_text' :'java.lang.String' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='2147483647', sourcetypeid='12', sourcetypename='text')  NOT NULL SORTABLE,
+        meeting_date = 'meeting_date' :'java.time.LocalDate' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='13', sourcetypeid='91', sourcetypename='date')  NOT NULL SORTABLE,
+        meeting_type = 'meeting_type' :'java.lang.String' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='30', sourcetypeid='12', sourcetypename='varchar')  NOT NULL SORTABLE,
+        embedding = 'embedding' :'com.denodo.vdb.sql.FloatVector' (OPT) (sourcetyperadix='10', sourcetypesize='1536', sourcetypeid='1111', sourcetypename='vector')  NOT SORTABLE
+    )
+    CONSTRAINT 'officer_transcripts_pkey' PRIMARY KEY ( 'transcript_id' )
+    INDEX 'officer_transcripts_pkey' OTHER UNIQUE PRIMARY ( 'transcript_id' )
+    INDEX 'idx_transcripts_customer' OTHER ( 'customer_id' )
+    INDEX 'idx_transcripts_date' OTHER ( 'meeting_date' )
+    INDEX 'idx_transcripts_officer' OTHER ( 'loan_officer_id' );

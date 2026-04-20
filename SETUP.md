@@ -63,6 +63,13 @@ For the deterministic and investigation workflows, make sure these views are ava
 - `customer_complaints`
 - `officer_transcripts`
 
+(The last two are two new views that are not in standard demo. They point to unstructured data stored in Postgres/Pgvector. Their VQLs can be found in vql/ folder. You can import the data for them from sql/ folder using 
+
+psql -U <username> -d <database> -f customer_complaints.sql
+psql -U <username> -d <database> -f officer_transcripts.sql
+
+)
+
 ### 5. Start the Denodo MCP server
 
 ```bash
