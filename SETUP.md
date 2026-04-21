@@ -26,7 +26,7 @@ For semantic lookup in the investigation branch, the current Denodo query shape 
 
 ## Workflow Files
 
-Refer workflows/final-workflow-with-unstructured.json for the final flow. You can refer to workflows/staging-workflows for iterative workflows if you need any previous version. 
+Refer [workflows/updated-final-workflow-payment-fix.json](workflows/updated-final-workflow-payment-fix.json) for the current gold workflow. You can refer to `workflows/v1-workflows` and `workflows/staging-workflows` if you need previous versions.
 
 ## Steps
 
@@ -105,7 +105,7 @@ Expected endpoint in the current RAG candidates:
 
 - Go to **Workflows**
 - Choose **Import from File**
-- Import workflows/final-workflow-with-unstructured.json
+- Import [workflows/updated-final-workflow-payment-fix.json](workflows/updated-final-workflow-payment-fix.json)
 
 
 ### 9. Configure OpenAI in n8n
